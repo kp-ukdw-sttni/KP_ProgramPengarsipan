@@ -33,6 +33,8 @@
                                 <x-input-label for="action" :value="__('Tipe Tindakan')" />
                                 <select id="action" name="action" class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm block mt-1 w-full bg-white text-gray-900">
                                     <option value="">{{ __('Semua Tindakan') }}</option>
+                                    <option value="Login" {{ request('action') === 'Login' ? 'selected' : '' }}>Login (Masuk)</option>
+                                    <option value="Logout" {{ request('action') === 'Logout' ? 'selected' : '' }}>Logout (Keluar)</option>
                                     <option value="Create" {{ request('action') === 'Create' ? 'selected' : '' }}>Create (Tambah)</option>
                                     <option value="Update" {{ request('action') === 'Update' ? 'selected' : '' }}>Update (Edit)</option>
                                     <option value="Delete" {{ request('action') === 'Delete' ? 'selected' : '' }}>Delete (Hapus)</option>

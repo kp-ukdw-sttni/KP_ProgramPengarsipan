@@ -28,6 +28,14 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        // Log login action
+        \App\Models\AuditLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'Login',
+            'ip_address' => $request->ip(),
+            'details' => "Pengguna '" . Auth::user()->name . "' berhasil masuk ke dalam sistem.",
+        ]);
+
         return redirect()->intended(route('dashboard', absolute: false));
     }
 
@@ -36,6 +44,16 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        $user = Auth::user();
+        if ($user) {
+            \App\Models\AuditLog::create([
+                'user_id' => $user->id,
+                'action' => 'Logout',
+                'ip_address' => $request->ip(),
+                'details' => "Pengguna '{$user->name}' keluar dari sistem.",
+            ]);
+        }
+
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();

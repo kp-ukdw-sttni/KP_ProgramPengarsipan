@@ -45,8 +45,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/peminjaman/{peminjaman}/approve', [PeminjamanController::class, 'approve'])->name('peminjaman.approve')->middleware('role:Superadmin|Operator');
     Route::post('/peminjaman/{peminjaman}/reject', [PeminjamanController::class, 'reject'])->name('peminjaman.reject')->middleware('role:Superadmin|Operator');
 
-    // Audit Logs (Superadmin only)
-    Route::get('/audit-log', [AuditLogController::class, 'index'])->name('audit.index')->middleware('role:Superadmin');
+    // Audit Logs (Superadmin and Operator)
+    Route::get('/audit-log', [AuditLogController::class, 'index'])->name('audit.index')->middleware('role:Superadmin|Operator');
 });
 
 require __DIR__.'/auth.php';

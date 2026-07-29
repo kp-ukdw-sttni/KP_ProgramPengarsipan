@@ -1,6 +1,6 @@
-<aside class="w-64 bg-[#181c32] text-gray-300 flex flex-col shrink-0 min-h-screen">
+<div class="flex-1 flex flex-col h-full bg-[#181c32] text-gray-300">
     <!-- Brand / Header -->
-    <div class="h-16 flex items-center px-4 border-b border-white/10 bg-[#13172e]">
+    <div class="h-16 flex items-center px-4 border-b border-white/10 bg-[#13172e] shrink-0">
         <a href="{{ route('dashboard') }}" class="flex items-center text-white">
             <x-application-logo />
         </a>
@@ -63,7 +63,7 @@
         </div>
 
         <!-- ADMINISTRASI SECTION -->
-        @hasrole('Superadmin')
+        @hasanyrole('Superadmin|Operator')
             <div class="pt-4">
                 <span class="text-[9px] text-gray-500 font-bold uppercase tracking-wider px-4 block mb-2">{{ __('ADMINISTRASI') }}</span>
                 
@@ -74,11 +74,11 @@
                     <span>{{ __('Audit Trail Log') }}</span>
                 </a>
             </div>
-        @endhasrole
+        @endhasanyrole
     </nav>
 
     <!-- Bottom Section: Profile Card -->
-    <div class="p-4 border-t border-white/10 bg-[#13172e] flex items-center justify-between">
+    <div class="p-4 border-t border-white/10 bg-[#13172e] flex items-center justify-between shrink-0">
         <div class="flex items-center gap-3 min-w-0">
             <!-- Initials Avatar -->
             @php
@@ -109,4 +109,4 @@
             </button>
         </form>
     </div>
-</aside>
+</div>
