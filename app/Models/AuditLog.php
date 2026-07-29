@@ -23,6 +23,10 @@ class AuditLog extends Model
         'details',
     ];
 
+    protected $casts = [
+        'created_at' => 'datetime',
+    ];
+
     /**
      * Get the user who performed the action.
      */
