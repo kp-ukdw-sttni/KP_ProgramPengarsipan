@@ -1,0 +1,6 @@
+# Nixpacks configuration for Railway deployment
+[phases.release]
+cmds = ["php artisan migrate --force"]
+
+[variables]
+PHP_EXTENSIONS = "ctype curl dom fileinfo filter hash mbstring openssl pcre pdo session tokenizer xml zip bz2"
