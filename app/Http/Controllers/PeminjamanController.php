@@ -17,7 +17,6 @@ class PeminjamanController extends Controller
     {
         $user = Auth::user();
         
-        // Karyawan can only see their own borrowing requests
         $peminjaman = Peminjaman::where('user_id', $user->id)
             ->with(['arsip.divisi', 'arsip.kategori', 'approver'])
             ->latest()
@@ -33,12 +32,10 @@ class PeminjamanController extends Controller
     {
         $user = Auth::user();
 
-        // Check if archive is Expired
         if ($arsip->status === 'Expired') {
             return back()->with('error', 'Dokumen tidak dapat dipinjam karena masa retensi telah habis.');
         }
 
-        // Check if there is already an active or pending request for this user
         $existing = Peminjaman::where('arsip_id', $arsip->id)
             ->where('user_id', $user->id)
             ->whereIn('status_approval', ['Pending', 'Approved'])
@@ -51,7 +48,6 @@ class PeminjamanController extends Controller
             if ($existing->isActive()) {
                 return back()->with('success', 'Akses Anda ke dokumen ini masih aktif hingga ' . $existing->expired_at->format('d M Y H:i'));
             }
-            // If approved but expired, we can create a new request
         }
 
         Peminjaman::create([
@@ -60,7 +56,6 @@ class PeminjamanController extends Controller
             'status_approval' => 'Pending',
         ]);
 
-        // Log this request in AuditLog
         AuditLog::create([
             'user_id' => $user->id,
             'action' => 'Request Access',
@@ -73,28 +68,66 @@ class PeminjamanController extends Controller
     }
 
     /**
+     * Cancel a pending borrow request (only if status is Pending).
+     */
+    public function cancelRequest(Peminjaman $peminjaman)
+    {
+        $user = Auth::user();
+
+        // Only the owner of the request can cancel it
+        if ($peminjaman->user_id !== $user->id) {
+            abort(403, 'Anda tidak diizinkan membatalkan permintaan orang lain.');
+        }
+
+        // Can only cancel if status is still Pending
+        if ($peminjaman->status_approval !== 'Pending') {
+            return redirect()->route('peminjaman.index')
+                ->with('error', 'Permintaan yang sudah diproses tidak dapat dibatalkan.');
+        }
+
+        AuditLog::create([
+            'user_id'    => $user->id,
+            'action'     => 'Cancel Request',
+            'arsip_id'   => $peminjaman->arsip_id,
+            'ip_address' => request()->ip(),
+            'details'    => "Membatalkan permintaan akses dokumen ID #{$peminjaman->arsip_id}.",
+        ]);
+
+        $peminjaman->delete();
+
+        return redirect()->route('peminjaman.index')->with('success', 'Permintaan akses berhasil dibatalkan.');
+    }
+
+    /**
      * Display listing of pending requests for Admin and Operator.
      */
-    public function manage()
+    public function manage(Request $request)
     {
         $user = Auth::user();
 
         $query = Peminjaman::with(['user', 'arsip.divisi', 'arsip.kategori']);
 
         if ($user->hasRole('Operator')) {
-            // Operator only sees requests for their division
             $divisiId = $user->divisi_id;
             $query->whereHas('arsip', function ($q) use ($divisiId) {
                 $q->where('divisi_id', $divisiId);
             });
         }
 
-        // Sort by Pending first, then latest
+        // Filter by status tab
+        if ($request->filled('status')) {
+            $query->where('status_approval', $request->status);
+        }
+
         $peminjaman = $query->orderByRaw("FIELD(status_approval, 'Pending', 'Approved', 'Rejected', 'Expired') ASC")
             ->latest()
             ->paginate(15);
 
-        return view('peminjaman.manage', compact('peminjaman'));
+        $pendingCount   = Peminjaman::when($user->hasRole('Operator'), fn ($q) => $q->whereHas('arsip', fn ($q2) => $q2->where('divisi_id', $user->divisi_id)))->where('status_approval', 'Pending')->count();
+        $approvedCount  = Peminjaman::when($user->hasRole('Operator'), fn ($q) => $q->whereHas('arsip', fn ($q2) => $q2->where('divisi_id', $user->divisi_id)))->where('status_approval', 'Approved')->count();
+        $rejectedCount  = Peminjaman::when($user->hasRole('Operator'), fn ($q) => $q->whereHas('arsip', fn ($q2) => $q2->where('divisi_id', $user->divisi_id)))->where('status_approval', 'Rejected')->count();
+
+        return view('peminjaman.manage', compact('peminjaman', 'pendingCount', 'approvedCount', 'rejectedCount'));
     }
 
     /**
@@ -104,13 +137,12 @@ class PeminjamanController extends Controller
     {
         $user = Auth::user();
 
-        // Authorization check: Operator can only approve for their division
         if ($user->hasRole('Operator') && $peminjaman->arsip->divisi_id != $user->divisi_id) {
             abort(403, 'Anda tidak diizinkan menyetujui permintaan dokumen dari divisi lain.');
         }
 
         $request->validate([
-            'duration' => ['required', 'integer', 'min:1', 'max:168'], // min 1 hour, max 1 week (168 hours)
+            'duration' => ['required', 'integer', 'min:1', 'max:168'],
         ]);
 
         $borrowedAt = now();
@@ -124,43 +156,44 @@ class PeminjamanController extends Controller
             'notes' => $request->notes,
         ]);
 
-        // Log this approval in AuditLog
         AuditLog::create([
-            'user_id' => $user->id,
-            'action' => 'Approve Access',
-            'arsip_id' => $peminjaman->arsip_id,
+            'user_id'    => $user->id,
+            'action'     => 'Approve Access',
+            'arsip_id'   => $peminjaman->arsip_id,
             'ip_address' => request()->ip(),
-            'details' => "Menyetujui permintaan akses dokumen '{$peminjaman->arsip->judul}' untuk Karyawan '{$peminjaman->user->name}' selama {$request->duration} jam.",
+            'details'    => "Menyetujui permintaan akses dokumen '{$peminjaman->arsip->judul}' untuk '{$peminjaman->user->name}' selama {$request->duration} jam.",
         ]);
 
         return redirect()->route('peminjaman.manage')->with('success', 'Permintaan peminjaman berhasil disetujui.');
     }
 
     /**
-     * Reject a borrow request.
+     * Reject a borrow request with a mandatory rejection note.
      */
     public function reject(Request $request, Peminjaman $peminjaman)
     {
         $user = Auth::user();
 
-        // Authorization check
         if ($user->hasRole('Operator') && $peminjaman->arsip->divisi_id != $user->divisi_id) {
             abort(403, 'Anda tidak diizinkan menolak permintaan dokumen dari divisi lain.');
         }
 
-        $peminjaman->update([
-            'status_approval' => 'Rejected',
-            'approved_by' => $user->id,
-            'notes' => $request->notes ?? 'Permintaan akses ditolak oleh Operator.',
+        $request->validate([
+            'notes' => ['required', 'string', 'max:500'],
         ]);
 
-        // Log this rejection in AuditLog
+        $peminjaman->update([
+            'status_approval' => 'Rejected',
+            'approved_by'     => $user->id,
+            'notes'           => $request->notes,
+        ]);
+
         AuditLog::create([
-            'user_id' => $user->id,
-            'action' => 'Reject Access',
-            'arsip_id' => $peminjaman->arsip_id,
+            'user_id'    => $user->id,
+            'action'     => 'Reject Access',
+            'arsip_id'   => $peminjaman->arsip_id,
             'ip_address' => request()->ip(),
-            'details' => "Menolak permintaan akses dokumen '{$peminjaman->arsip->judul}' untuk Karyawan '{$peminjaman->user->name}'. Alasan: " . ($request->notes ?? 'Tidak ditentukan'),
+            'details'    => "Menolak permintaan akses dokumen '{$peminjaman->arsip->judul}' untuk '{$peminjaman->user->name}'. Alasan: {$request->notes}",
         ]);
 
         return redirect()->route('peminjaman.manage')->with('success', 'Permintaan peminjaman telah ditolak.');

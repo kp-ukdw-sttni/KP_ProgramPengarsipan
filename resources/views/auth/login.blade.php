@@ -43,12 +43,5 @@
             </button>
         </div>
 
-        <!-- Register Link for Karyawan (STTNI specific) -->
-        <div class="text-center pt-6 border-t border-gray-100 text-xs text-gray-500">
-            <span>{{ __('Belum memiliki akun Karyawan?') }}</span>
-            <a href="{{ route('register') }}" class="text-indigo-600 hover:text-indigo-800 font-semibold hover:underline ms-1">
-                {{ __('Daftar Baru') }}
-            </a>
-        </div>
     </form>
 </x-guest-layout>

@@ -7,10 +7,10 @@ use App\Models\Divisi;
 use App\Models\KategoriArsip;
 use App\Models\Peminjaman;
 use App\Models\AuditLog;
+use App\Models\ArsipVersion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Response;
 
 class ArsipController extends Controller
 {
@@ -35,6 +35,9 @@ class ArsipController extends Controller
         }
         if ($request->filled('divisi_id')) {
             $query->where('divisi_id', $request->divisi_id);
+        }
+        if ($request->filled('status_publikasi')) {
+            $query->where('status_publikasi', $request->status_publikasi);
         }
 
         $arsip = $query->latest()->paginate(10);
@@ -61,7 +64,6 @@ class ArsipController extends Controller
     {
         $user = Auth::user();
         
-        // Operators can only create archives in their own division
         if ($user->hasRole('Operator')) {
             $divisi = Divisi::where('id', $user->divisi_id)->get();
         } else {
@@ -81,28 +83,31 @@ class ArsipController extends Controller
         
         $request->validate([
             'nomor_arsip' => ['required', 'string', 'unique:arsip,nomor_arsip'],
+            'nomor_surat' => ['nullable', 'string', 'max:255'],
             'judul' => ['required', 'string', 'max:255'],
             'deskripsi' => ['nullable', 'string'],
             'kategori_id' => ['required', 'exists:kategori_arsip,id'],
             'divisi_id' => ['required', 'exists:divisi,id'],
-            'file' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'], // Max 10MB
+            'file' => ['required', 'file', 'mimes:pdf,docx,jpg,jpeg,png', 'max:10240'], // Max 10MB
             'retention_date' => ['required', 'date', 'after:today'],
+            'status_publikasi' => ['required', 'in:Public,Restricted'],
+            'tags' => ['nullable', 'string', 'max:255'],
         ]);
 
-        // Enforcement: Operator can only store under their own division
+        // Operator check
         if ($user->hasRole('Operator') && $request->divisi_id != $user->divisi_id) {
             return back()->withErrors(['divisi_id' => 'Sebagai Operator, Anda hanya dapat mengarsipkan dokumen di divisi Anda sendiri.']);
         }
 
-        // Store file securely in storage/app/private/archives
+        // Store file securely
         $file = $request->file('file');
         $fileName = time() . '_' . $file->getClientOriginalName();
-        // putFileAs stores inside private storage since 'local' disk is private by default in Laravel
         $fileSubPath = 'private/archives/' . $request->divisi_id;
         $filePath = Storage::disk('local')->putFileAs($fileSubPath, $file, $fileName);
 
         Arsip::create([
             'nomor_arsip' => $request->nomor_arsip,
+            'nomor_surat' => $request->nomor_surat,
             'judul' => $request->judul,
             'deskripsi' => $request->deskripsi,
             'kategori_id' => $request->kategori_id,
@@ -110,6 +115,9 @@ class ArsipController extends Controller
             'file_path' => $filePath,
             'retention_date' => $request->retention_date,
             'status' => 'Aktif',
+            'status_publikasi' => $request->status_publikasi,
+            'tags' => $request->tags,
+            'uploader_id' => $user->id,
         ]);
 
         return redirect()->route('arsip.index')->with('success', 'Arsip berhasil disimpan dalam penyimpanan aman.');
@@ -122,7 +130,6 @@ class ArsipController extends Controller
     {
         $user = Auth::user();
         
-        // Authorization check: Operator can only edit their own division's archives
         if ($user->hasRole('Operator') && $arsip->divisi_id != $user->divisi_id) {
             abort(403, 'Anda tidak diizinkan mengedit arsip divisi lain.');
         }
@@ -138,50 +145,62 @@ class ArsipController extends Controller
     }
 
     /**
-     * Update the archive details.
+     * Update the archive details and handle document versioning.
      */
     public function update(Request $request, Arsip $arsip)
     {
         $user = Auth::user();
 
-        // Authorization check
         if ($user->hasRole('Operator') && $arsip->divisi_id != $user->divisi_id) {
             abort(403, 'Anda tidak diizinkan memperbarui arsip divisi lain.');
         }
 
         $request->validate([
             'nomor_arsip' => ['required', 'string', 'unique:arsip,nomor_arsip,' . $arsip->id],
+            'nomor_surat' => ['nullable', 'string', 'max:255'],
             'judul' => ['required', 'string', 'max:255'],
             'deskripsi' => ['nullable', 'string'],
             'kategori_id' => ['required', 'exists:kategori_arsip,id'],
             'divisi_id' => ['required', 'exists:divisi,id'],
-            'file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
+            'file' => ['nullable', 'file', 'mimes:pdf,docx,jpg,jpeg,png', 'max:10240'],
             'retention_date' => ['required', 'date'],
             'status' => ['required', 'in:Aktif,Expired,Dimusnahkan'],
+            'status_publikasi' => ['required', 'in:Public,Restricted'],
+            'tags' => ['nullable', 'string', 'max:255'],
+            'change_note' => ['nullable', 'string', 'max:255'],
         ]);
 
-        // Enforcement: Operator cannot change the division to another division
         if ($user->hasRole('Operator') && $request->divisi_id != $user->divisi_id) {
             return back()->withErrors(['divisi_id' => 'Sebagai Operator, Anda hanya dapat mengarsipkan dokumen di divisi Anda sendiri.']);
         }
 
         $data = [
             'nomor_arsip' => $request->nomor_arsip,
+            'nomor_surat' => $request->nomor_surat,
             'judul' => $request->judul,
             'deskripsi' => $request->deskripsi,
             'kategori_id' => $request->kategori_id,
             'divisi_id' => $request->divisi_id,
             'retention_date' => $request->retention_date,
             'status' => $request->status,
+            'status_publikasi' => $request->status_publikasi,
+            'tags' => $request->tags,
         ];
 
-        // If new file is uploaded
+        // Document Versioning: If new file is uploaded
         if ($request->hasFile('file')) {
-            // Delete old file
-            if (Storage::disk('local')->exists($arsip->file_path)) {
-                Storage::disk('local')->delete($arsip->file_path);
-            }
+            // Save old version to versions history
+            $currentVersionNumber = $arsip->versions()->max('version_number') ?? 0;
+            
+            ArsipVersion::create([
+                'arsip_id' => $arsip->id,
+                'version_number' => $currentVersionNumber + 1,
+                'file_path' => $arsip->file_path,
+                'uploaded_by' => $arsip->uploader_id ?? $user->id,
+                'change_note' => $request->change_note ?? 'Revisi dokumen unggah baru.',
+            ]);
 
+            // Save new file
             $file = $request->file('file');
             $fileName = time() . '_' . $file->getClientOriginalName();
             $fileSubPath = 'private/archives/' . $request->divisi_id;
@@ -195,25 +214,86 @@ class ArsipController extends Controller
     }
 
     /**
-     * Delete the archive.
+     * Soft delete the archive.
      */
     public function destroy(Arsip $arsip)
     {
         $user = Auth::user();
 
-        // Authorization check
         if ($user->hasRole('Operator') && $arsip->divisi_id != $user->divisi_id) {
             abort(403, 'Anda tidak diizinkan menghapus arsip divisi lain.');
         }
 
-        // Delete physical file
+        // Just trigger soft delete, don't delete physical file here
+        $arsip->delete();
+
+        return redirect()->route('arsip.index')->with('success', 'Arsip berhasil dipindahkan ke Recycle Bin.');
+    }
+
+    /**
+     * Display a listing of soft deleted archives.
+     */
+    public function trashIndex()
+    {
+        $user = Auth::user();
+        
+        $query = Arsip::onlyTrashed()->with(['divisi', 'kategori']);
+
+        if ($user->hasRole('Operator')) {
+            $query->where('divisi_id', $user->divisi_id);
+        }
+
+        $arsip = $query->latest()->paginate(10);
+
+        return view('arsip.trash', compact('arsip'));
+    }
+
+    /**
+     * Restore a soft deleted archive.
+     */
+    public function restore($id)
+    {
+        $user = Auth::user();
+        $arsip = Arsip::onlyTrashed()->findOrFail($id);
+
+        if ($user->hasRole('Operator') && $arsip->divisi_id != $user->divisi_id) {
+            abort(403, 'Anda tidak diizinkan memulihkan arsip divisi lain.');
+        }
+
+        $arsip->restore();
+
+        return redirect()->route('arsip.trash')->with('success', 'Arsip berhasil dipulihkan dari Recycle Bin.');
+    }
+
+    /**
+     * Force delete (permanently delete) the archive and its versions.
+     */
+    public function forceDelete($id)
+    {
+        $user = Auth::user();
+        
+        // Only Superadmin is allowed to force delete permanently
+        if (!$user->hasRole('Superadmin')) {
+            abort(403, 'Hanya Superadmin yang diizinkan menghapus arsip secara permanen.');
+        }
+
+        $arsip = Arsip::onlyTrashed()->findOrFail($id);
+
+        // Delete physical main file
         if (Storage::disk('local')->exists($arsip->file_path)) {
             Storage::disk('local')->delete($arsip->file_path);
         }
 
-        $arsip->delete();
+        // Delete version physical files
+        foreach ($arsip->versions as $version) {
+            if (Storage::disk('local')->exists($version->file_path)) {
+                Storage::disk('local')->delete($version->file_path);
+            }
+        }
 
-        return redirect()->route('arsip.index')->with('success', 'Arsip berhasil dihapus permanen.');
+        $arsip->forceDelete();
+
+        return redirect()->route('arsip.trash')->with('success', 'Arsip berhasil dihapus secara permanen dari server.');
     }
 
     /**
@@ -223,18 +303,22 @@ class ArsipController extends Controller
     {
         $user = Auth::user();
 
-        // 1. Superadmin has full access
+        // 1. Public archives can be viewed by any authenticated user
+        if ($arsip->status_publikasi === 'Public') {
+            return true;
+        }
+
+        // 2. Superadmin has full access
         if ($user->hasRole('Superadmin')) {
             return true;
         }
 
-        // 2. Operator has access to their own division's archives
+        // 3. Operator has access to their own division's archives
         if ($user->hasRole('Operator') && $arsip->divisi_id == $user->divisi_id) {
             return true;
         }
 
-        // 3. Employees (Karyawan) / Operators of other divisions must have an active and approved borrow record
-        // An active borrow request is one that is 'Approved' and current time is between borrowed_at and expired_at.
+        // 4. Restricted access must have an active and approved borrow/approval record
         $hasActivePeminjaman = Peminjaman::where('arsip_id', $arsip->id)
             ->where('user_id', $user->id)
             ->where('status_approval', 'Approved')
@@ -268,15 +352,6 @@ class ArsipController extends Controller
             abort(404, 'File tidak ditemukan di server.');
         }
 
-        // Log the view action to the database
-        AuditLog::create([
-            'user_id' => Auth::id(),
-            'action' => 'View',
-            'arsip_id' => $arsip->id,
-            'ip_address' => request()->ip(),
-            'details' => "Membuka file arsip '{$arsip->judul}' (Nomor: {$arsip->nomor_arsip}) melalui viewer.",
-        ]);
-
         return response()->file($absolutePath);
     }
 
@@ -299,7 +374,7 @@ class ArsipController extends Controller
             abort(404, 'File tidak ditemukan di server.');
         }
 
-        // Log the download action to the database
+        // Log the download action manually since the auto-event boots on model change, not read
         AuditLog::create([
             'user_id' => Auth::id(),
             'action' => 'Download',

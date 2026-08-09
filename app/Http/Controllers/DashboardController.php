@@ -6,13 +6,14 @@ use App\Models\User;
 use App\Models\Divisi;
 use App\Models\Arsip;
 use App\Models\Peminjaman;
+use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
     /**
-     * Display the dashboard.
+     * Display the dashboard with stats and activity log data.
      */
     public function index()
     {
@@ -20,7 +21,7 @@ class DashboardController extends Controller
         
         // Define base variables
         $totalArsip = 0;
-        $totalActivePeminjaman = 0;
+        $totalActivePeminjaman = 0; // Will be mapped to "Downloads/Unduhan" count for analytics
         $totalUsers = 0;
         $totalExpiredArsip = 0;
         $totalPendingPeminjaman = 0;
@@ -29,12 +30,10 @@ class DashboardController extends Controller
         $recentPeminjaman = collect();
         $myActivePeminjaman = collect();
 
+        // 1. Load general aggregates
         if ($user->hasRole('Superadmin')) {
-            // Superadmin sees global stats
             $totalArsip = Arsip::count();
-            $totalActivePeminjaman = Peminjaman::where('status_approval', 'Approved')
-                ->where('expired_at', '>', now())
-                ->count();
+            $totalActivePeminjaman = AuditLog::where('action', 'Download')->count(); // Total Unduhan
             $totalUsers = User::count();
             $totalExpiredArsip = Arsip::where('status', 'Expired')->count();
             $totalPendingPeminjaman = Peminjaman::where('status_approval', 'Pending')->count();
@@ -42,25 +41,23 @@ class DashboardController extends Controller
                 ->where('expired_at', '<=', now())
                 ->count();
             
-            // Stats per division
             $divisiStats = Divisi::withCount('arsip')->get();
 
-            // Recent borrow requests
-            $recentPeminjaman = Peminjaman::with(['user', 'arsip'])
+            // Recent borrow requests (Recent Uploads / Activity)
+            $recentPeminjaman = Peminjaman::with(['user', 'arsip.divisi', 'arsip.kategori'])
                 ->latest()
                 ->take(5)
                 ->get();
 
         } elseif ($user->hasRole('Operator')) {
-            // Operator sees division-specific stats
             $divisiId = $user->divisi_id;
             
             $totalArsip = Arsip::where('divisi_id', $divisiId)->count();
-            $totalActivePeminjaman = Peminjaman::whereHas('arsip', function ($query) use ($divisiId) {
+            // Total Unduhan for archives in this division
+            $totalActivePeminjaman = AuditLog::where('action', 'Download')
+                ->whereHas('arsip', function ($query) use ($divisiId) {
                     $query->where('divisi_id', $divisiId);
                 })
-                ->where('status_approval', 'Approved')
-                ->where('expired_at', '>', now())
                 ->count();
             $totalUsers = User::where('divisi_id', $divisiId)->count();
             $totalExpiredArsip = Arsip::where('divisi_id', $divisiId)->where('status', 'Expired')->count();
@@ -76,11 +73,10 @@ class DashboardController extends Controller
                 ->where('expired_at', '<=', now())
                 ->count();
 
-            // Recent borrow requests for their division
             $recentPeminjaman = Peminjaman::whereHas('arsip', function ($query) use ($divisiId) {
                     $query->where('divisi_id', $divisiId);
                 })
-                ->with(['user', 'arsip'])
+                ->with(['user', 'arsip.divisi', 'arsip.kategori'])
                 ->latest()
                 ->take(5)
                 ->get();
@@ -88,7 +84,7 @@ class DashboardController extends Controller
             $divisiStats = Divisi::where('id', $divisiId)->withCount('arsip')->get();
 
         } else {
-            // Karyawan sees their own statistics and division name
+            // Karyawan / Employee
             $totalArsip = Arsip::where('status', 'Aktif')->count();
             
             $myActivePeminjaman = Peminjaman::where('user_id', $user->id)
@@ -97,7 +93,7 @@ class DashboardController extends Controller
                 ->with('arsip')
                 ->get();
                 
-            $totalActivePeminjaman = $myActivePeminjaman->count();
+            $totalActivePeminjaman = AuditLog::where('user_id', $user->id)->where('action', 'Download')->count(); // Personal Downloads
             $totalExpiredArsip = Arsip::where('status', 'Expired')->count();
             $totalPendingPeminjaman = Peminjaman::where('user_id', $user->id)
                 ->where('status_approval', 'Pending')
@@ -108,11 +104,22 @@ class DashboardController extends Controller
                 ->count();
             
             $recentPeminjaman = Peminjaman::where('user_id', $user->id)
-                ->with('arsip')
+                ->with(['arsip.divisi', 'arsip.kategori'])
                 ->latest()
                 ->take(5)
                 ->get();
         }
+
+        // Additional data arrays for analytics: Upload Trend per Month
+        $uploadTrend = Arsip::selectRaw("DATE_FORMAT(created_at, '%m-%Y') as month, count(*) as total")
+            ->groupBy('month')
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        $recentUploads = Arsip::with(['divisi', 'kategori'])
+            ->latest()
+            ->take(5)
+            ->get();
 
         return view('dashboard', compact(
             'totalArsip',
@@ -123,7 +130,9 @@ class DashboardController extends Controller
             'totalCompletedPeminjaman',
             'divisiStats',
             'recentPeminjaman',
-            'myActivePeminjaman'
+            'myActivePeminjaman',
+            'uploadTrend',
+            'recentUploads'
         ));
     }
 }
