@@ -161,7 +161,7 @@ const vClickOutside = {
                         </div>
 
                         <!-- User dropdown -->
-                        <div class="relative" v-click-outside="userMenuOpen = false">
+                        <div class="relative" v-click-outside="() => userMenuOpen = false">
                             <button
                                 type="button"
                                 class="flex items-center gap-2 rounded-full p-1 transition hover:bg-gray-100"

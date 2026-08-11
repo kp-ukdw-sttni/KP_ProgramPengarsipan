@@ -24,7 +24,6 @@ createInertiaApp({
             .use(ZiggyVue, {
                 ...props.initialPage.props.ziggy,
                 url: window.location.origin,
-                location: new URL(window.location.href),
             })
             .mount(el);
     },
