@@ -22,6 +22,7 @@ class Arsip extends Model
         'deskripsi',
         'kategori_id',
         'divisi_id',
+        'tahun',
         'file_path',
         'retention_date',
         'status',
@@ -32,6 +33,7 @@ class Arsip extends Model
 
     protected $casts = [
         'retention_date' => 'date',
+        'tahun' => 'integer',
     ];
 
     protected static function booted()

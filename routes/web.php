@@ -29,11 +29,12 @@ Route::middleware(['auth', 'check.status'])->group(function () {
     // MANAJEMEN DOKUMEN (ARSIP)
     // ============================================================
     Route::get('/arsip', [ArsipController::class, 'index'])->name('arsip.index');
+    Route::get('/arsip/explorer', [ArsipController::class, 'explorer'])->name('arsip.explorer');
     Route::get('/arsip/{arsip}/stream', [ArsipController::class, 'streamFile'])->name('arsip.stream');
     Route::get('/arsip/{arsip}/download', [ArsipController::class, 'downloadFile'])->name('arsip.download');
     Route::get('/arsip/{arsip}/view', [ArsipController::class, 'viewDocument'])->name('arsip.view');
 
-    Route::middleware(['role:Superadmin|Operator'])->group(function () {
+    Route::middleware(['role:Superadmin|Operator|Staf TU'])->group(function () {
         Route::get('/arsip/create', [ArsipController::class, 'create'])->name('arsip.create');
         Route::post('/arsip', [ArsipController::class, 'store'])->name('arsip.store');
         Route::get('/arsip/{arsip}/edit', [ArsipController::class, 'edit'])->name('arsip.edit');
@@ -44,7 +45,7 @@ Route::middleware(['auth', 'check.status'])->group(function () {
     // ============================================================
     // RECYCLE BIN / TRASH
     // ============================================================
-    Route::middleware(['role:Superadmin|Operator'])->group(function () {
+    Route::middleware(['role:Superadmin|Operator|Staf TU'])->group(function () {
         Route::get('/trash', [ArsipController::class, 'trashIndex'])->name('arsip.trash');
         Route::post('/trash/{id}/restore', [ArsipController::class, 'restore'])->name('arsip.restore');
         Route::delete('/trash/{id}/force-delete', [ArsipController::class, 'forceDelete'])->name('arsip.force_delete');
@@ -53,7 +54,7 @@ Route::middleware(['auth', 'check.status'])->group(function () {
     // ============================================================
     // KATEGORI & KLASIFIKASI DOKUMEN
     // ============================================================
-    Route::middleware(['role:Superadmin|Operator'])->group(function () {
+    Route::middleware(['role:Superadmin|Operator|Staf TU'])->group(function () {
         Route::get('/kategori', [KategoriController::class, 'index'])->name('kategori.index');
         Route::post('/kategori', [KategoriController::class, 'store'])->name('kategori.store');
         Route::get('/kategori/{kategori}/edit', [KategoriController::class, 'edit'])->name('kategori.edit');
@@ -68,7 +69,7 @@ Route::middleware(['auth', 'check.status'])->group(function () {
     Route::post('/peminjaman/{arsip}/request', [PeminjamanController::class, 'requestAccess'])->name('peminjaman.request');
     Route::delete('/peminjaman/{peminjaman}/cancel', [PeminjamanController::class, 'cancelRequest'])->name('peminjaman.cancel');
 
-    Route::middleware(['role:Superadmin|Operator'])->group(function () {
+    Route::middleware(['role:Superadmin|Operator|Staf TU'])->group(function () {
         Route::get('/peminjaman/manage', [PeminjamanController::class, 'manage'])->name('peminjaman.manage');
         Route::post('/peminjaman/{peminjaman}/approve', [PeminjamanController::class, 'approve'])->name('peminjaman.approve');
         Route::post('/peminjaman/{peminjaman}/reject', [PeminjamanController::class, 'reject'])->name('peminjaman.reject');
@@ -90,7 +91,7 @@ Route::middleware(['auth', 'check.status'])->group(function () {
     // ============================================================
     // AUDIT LOG & TRASH
     // ============================================================
-    Route::middleware(['role:Superadmin|Operator'])->group(function () {
+    Route::middleware(['role:Superadmin|Operator|Staf TU'])->group(function () {
         Route::get('/audit-log', [AuditLogController::class, 'index'])->name('audit.index');
     });
 });

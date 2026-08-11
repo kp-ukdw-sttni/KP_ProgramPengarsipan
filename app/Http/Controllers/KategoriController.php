@@ -3,26 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Models\KategoriArsip;
+use App\Services\KategoriService;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class KategoriController extends Controller
 {
+    public function __construct(private KategoriService $kategoriService) {}
+
     /**
      * Display a listing of categories and sub-categories.
      */
     public function index()
     {
-        // Load parent categories with their child sub-categories
-        $categories = KategoriArsip::whereNull('parent_id')
-            ->with(['children'])
-            ->withCount('arsip')
-            ->orderBy('name')
-            ->paginate(15);
-
-        // Fetch all categories for parent selection dropdown in forms
-        $parentCategories = KategoriArsip::whereNull('parent_id')->orderBy('name')->get();
-
-        return view('kategori.index', compact('categories', 'parentCategories'));
+        return Inertia::render('Kategori/Index', $this->kategoriService->getIndexData());
     }
 
     /**
@@ -37,12 +31,7 @@ class KategoriController extends Controller
             'parent_id' => ['nullable', 'exists:kategori_arsip,id'],
         ]);
 
-        KategoriArsip::create([
-            'kode' => $request->kode,
-            'name' => $request->name,
-            'deskripsi' => $request->deskripsi,
-            'parent_id' => $request->parent_id,
-        ]);
+        $this->kategoriService->create($request->all());
 
         return redirect()->route('kategori.index')->with('success', 'Kategori baru berhasil dibuat.');
     }
@@ -52,12 +41,7 @@ class KategoriController extends Controller
      */
     public function edit(KategoriArsip $kategori)
     {
-        $parentCategories = KategoriArsip::whereNull('parent_id')
-            ->where('id', '!=', $kategori->id) // Prevent self-referencing as parent
-            ->orderBy('name')
-            ->get();
-
-        return view('kategori.edit', compact('kategori', 'parentCategories'));
+        return Inertia::render('Kategori/Edit', $this->kategoriService->getEditData($kategori));
     }
 
     /**
@@ -66,18 +50,13 @@ class KategoriController extends Controller
     public function update(Request $request, KategoriArsip $kategori)
     {
         $request->validate([
-            'kode' => ['required', 'string', 'max:50', 'unique:kategori_arsip,kode,' . $kategori->id],
+            'kode' => ['required', 'string', 'max:50', 'unique:kategori_arsip,kode,'.$kategori->id],
             'name' => ['required', 'string', 'max:255'],
             'deskripsi' => ['nullable', 'string'],
             'parent_id' => ['nullable', 'exists:kategori_arsip,id', 'different:id'],
         ]);
 
-        $kategori->update([
-            'kode' => $request->kode,
-            'name' => $request->name,
-            'deskripsi' => $request->deskripsi,
-            'parent_id' => $request->parent_id,
-        ]);
+        $this->kategoriService->update($kategori, $request->all());
 
         return redirect()->route('kategori.index')->with('success', 'Kategori berhasil diperbarui.');
     }
@@ -87,18 +66,9 @@ class KategoriController extends Controller
      */
     public function destroy(KategoriArsip $kategori)
     {
-        // Deletion validation: Ensure no documents are linked
-        if ($kategori->arsip()->exists()) {
-            return redirect()->route('kategori.index')->with('error', 'Kategori ini tidak dapat dihapus karena memiliki dokumen terkait.');
-        }
+        $result = $this->kategoriService->delete($kategori);
 
-        // Deletion validation: Ensure no sub-categories are linked
-        if ($kategori->children()->exists()) {
-            return redirect()->route('kategori.index')->with('error', 'Kategori ini tidak dapat dihapus karena memiliki sub-kategori terkait.');
-        }
-
-        $kategori->delete();
-
-        return redirect()->route('kategori.index')->with('success', 'Kategori berhasil dihapus.');
+        return redirect()->route('kategori.index')
+            ->with($result['success'] ? 'success' : 'error', $result['message']);
     }
 }
