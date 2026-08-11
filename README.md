@@ -1,66 +1,197 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+<div align="center">
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+# 📁 E-Archive STTNI
 
-## About Laravel
+### Sistem Informasi Pengarsipan Dokumen Digital
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+**Sekolah Tinggi Teologi Nazarene Indonesia (STTNI)**
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+---
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+[![Laravel](https://img.shields.io/badge/Laravel-11.x-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)](https://laravel.com)
+[![Vue.js](https://img.shields.io/badge/Vue.js-3.x-4FC08D?style=for-the-badge&logo=vue.js&logoColor=white)](https://vuejs.org)
+[![Inertia.js](https://img.shields.io/badge/Inertia.js-2.x-9553E9?style=for-the-badge&logo=inertia&logoColor=white)](https://inertiajs.com)
+[![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-3.x-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
+[![PHP](https://img.shields.io/badge/PHP-8.2+-777BB4?style=for-the-badge&logo=php&logoColor=white)](https://php.net)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 
-## Learning Laravel
+</div>
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+---
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+## 📖 Tentang Aplikasi
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+**E-Archive STTNI** adalah sistem pengarsipan dokumen digital berbasis web yang dirancang khusus untuk kebutuhan tata kelola dokumen di lingkungan **Sekolah Tinggi Teologi Nazarene Indonesia (STTNI)**. Aplikasi ini dibangun sebagai bagian dari program **Kerja Praktik (KP)** dengan tujuan menggantikan proses pengarsipan manual menjadi sistem yang terdigitalisasi, terstruktur, dan mudah diakses.
 
-## Laravel Sponsors
+Sistem ini memungkinkan pengelolaan dokumen secara terpusat dengan kontrol akses berbasis peran (*role-based access control*), sehingga setiap pengguna hanya dapat mengakses dokumen sesuai dengan hak dan wewenangnya.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+---
 
-### Premium Partners
+## ✨ Fitur Utama
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+| Fitur | Deskripsi |
+|---|---|
+| 📂 **Manajemen Dokumen** | Unggah, edit, hapus, dan lihat dokumen dengan pratinjau PDF langsung di browser |
+| 🗂️ **Penjelajah Folder** | Navigasi dokumen layaknya file explorer berdasarkan struktur divisi/prodi |
+| 🔐 **Kontrol Akses Berbasis Peran** | Setiap pengguna memiliki hak akses berbeda sesuai perannya |
+| 📋 **Kategori Dokumen** | Pengelompokan dokumen berdasarkan kategori dan sub-kategori yang terstruktur |
+| 📤 **Peminjaman & Persetujuan** | Alur pengajuan akses dokumen dengan sistem persetujuan bertingkat |
+| 🔍 **Audit Trail Log** | Pencatatan setiap aktivitas pengguna secara otomatis untuk transparansi |
+| 🗑️ **Recycle Bin** | Dokumen yang dihapus disimpan sementara dan dapat dipulihkan |
+| 👥 **Manajemen Pengguna** | Kelola akun pengguna, penetapan peran, dan status akun |
+| 📊 **Dashboard Ringkasan** | Tampilan statistik dan aktivitas terkini secara real-time |
 
-## Contributing
+---
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## 👥 Peran Pengguna (Role)
 
-## Code of Conduct
+| Peran | Hak Akses |
+|---|---|
+| **Superadmin** | Akses penuh ke seluruh fitur dan manajemen sistem |
+| **Operator** | Kelola dokumen, kategori, persetujuan akses, dan audit log |
+| **Staf TU** | Unggah & kelola dokumen serta menyetujui peminjaman |
+| **Kaprodi** | Melihat dokumen dan menyetujui peminjaman |
+| **Dekan** | Melihat dokumen dan menyetujui peminjaman |
+| **Dosen** | Melihat & mengajukan peminjaman dokumen |
+| **Karyawan** | Melihat & mengajukan peminjaman dokumen |
+| **Mahasiswa** | Melihat & mengajukan peminjaman dokumen yang diizinkan |
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+---
 
-## Security Vulnerabilities
+## 🛠️ Teknologi yang Digunakan
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### Backend
+- **[Laravel 11](https://laravel.com)** — PHP Framework
+- **[Spatie Laravel Permission](https://spatie.be/docs/laravel-permission)** — Role & Permission Management
+- **[Spatie Laravel Backup](https://spatie.be/docs/laravel-backup)** — Database & File Backup
+- **[Tighten Ziggy](https://github.com/tighten/ziggy)** — Laravel Routes untuk JavaScript
 
-## License
+### Frontend
+- **[Vue.js 3](https://vuejs.org)** — Reactive UI Framework
+- **[Inertia.js](https://inertiajs.com)** — SPA tanpa API terpisah
+- **[Tailwind CSS 3](https://tailwindcss.com)** — Utility-first CSS Framework
+- **[Vite](https://vitejs.dev)** — Build tool modern
+- **[vue-pdf-embed](https://github.com/hrynko/vue-pdf-embed)** — Pratinjau dokumen PDF
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+---
+
+## ⚙️ Cara Instalasi
+
+### Prasyarat
+- PHP >= 8.2
+- Composer
+- Node.js >= 18.x & NPM
+- Database MySQL/MariaDB
+
+### Langkah Instalasi
+
+**1. Clone repositori**
+```bash
+git clone https://github.com/kp-ukdw-sttni/KP_ProgramPengarsipan.git
+cd KP_ProgramPengarsipan
+```
+
+**2. Install dependensi PHP**
+```bash
+composer install
+```
+
+**3. Install dependensi Node.js**
+```bash
+npm install
+```
+
+**4. Konfigurasi environment**
+```bash
+cp .env.example .env
+php artisan key:generate
+```
+
+**5. Sesuaikan konfigurasi database di file `.env`**
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=nama_database
+DB_USERNAME=username
+DB_PASSWORD=password
+```
+
+**6. Jalankan migrasi dan seeder**
+```bash
+php artisan migrate --seed
+```
+
+**7. Buat symbolic link untuk storage**
+```bash
+php artisan storage:link
+```
+
+**8. Build aset frontend**
+```bash
+npm run build
+```
+
+**9. Jalankan server**
+```bash
+php artisan serve
+```
+
+Akses aplikasi di **http://localhost:8000**
+
+---
+
+## 🔑 Akun Demo (Setelah Seeder)
+
+| Email | Password | Peran |
+|---|---|---|
+| `admin@sttni.ac.id` | `admin123` | Superadmin |
+| `operator_akademik@sttni.ac.id` | `operator123` | Operator |
+| `stafftu@sttni.ac.id` | `staff123` | Staf TU |
+| `kaprodi.ti@sttni.ac.id` | `kaprodi123` | Kaprodi |
+| `dekan.ftis@sttni.ac.id` | `dekan123` | Dekan |
+| `dosen.ti@sttni.ac.id` | `dosen123` | Dosen |
+| `mahasiswa@sttni.ac.id` | `mahasiswa123` | Mahasiswa |
+
+---
+
+## 📁 Struktur Direktori Penting
+
+```
+KP_ProgramPengarsipan/
+├── app/
+│   ├── Http/
+│   │   ├── Controllers/        # Controller untuk setiap fitur
+│   │   └── Middleware/         # Middleware termasuk Inertia & auth
+│   ├── Models/                 # Eloquent Models (Arsip, Divisi, dll)
+│   └── Services/               # Business logic layer
+├── database/
+│   ├── migrations/             # Skema database
+│   └── seeders/                # Data awal (role, user, dll)
+├── resources/
+│   └── js/
+│       ├── Components/         # Komponen Vue reusable
+│       ├── Composables/        # Vue composable (useAuth, useRoute)
+│       ├── Layouts/            # Layout utama aplikasi
+│       └── Pages/              # Halaman Vue per fitur
+├── routes/
+│   ├── web.php                 # Definisi route web
+│   └── auth.php                # Route autentikasi
+└── storage/
+    └── app/public/             # Penyimpanan file dokumen
+```
+
+---
+
+## 👨‍💻 Pengembang
+
+Proyek ini dikembangkan sebagai bagian dari **Kerja Praktik (KP)** di:
+
+- **Institusi:** Universitas Kristen Duta Wacana (UKDW)
+- **Tempat KP:** Sekolah Tinggi Teologi Nazarene Indonesia (STTNI)
+
+---
+
+## 📄 Lisensi
+
+Proyek ini dilisensikan di bawah [MIT License](https://opensource.org/licenses/MIT).
