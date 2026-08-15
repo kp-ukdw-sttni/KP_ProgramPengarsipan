@@ -9,6 +9,7 @@ import Pagination from '../../Components/ui/Pagination.vue'
 import Input from '../../Components/ui/Input.vue'
 import Select from '../../Components/ui/Select.vue'
 import InputError from '../../Components/ui/InputError.vue'
+import PageHero from '../../Components/ui/PageHero.vue'
 import PrimaryButton from '../../Components/ui/PrimaryButton.vue'
 import SecondaryButton from '../../Components/ui/SecondaryButton.vue'
 import DangerButton from '../../Components/ui/DangerButton.vue'
@@ -76,17 +77,26 @@ const performDelete = () => {
     <AuthenticatedLayout title="Kategori Arsip">
         <FlashMessages />
 
-        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-                <h3 class="text-lg font-bold text-gray-900">Kategori &amp; Klasifikasi Dokumen</h3>
-                <p class="text-xs text-gray-500">Kelola kategori utama dan sub-kategori dokumen.</p>
-            </div>
-            <PrimaryButton type="button" @click="openCreate">
-                Tambah Kategori
-            </PrimaryButton>
-        </div>
+        <PageHero
+            eyebrow="Klasifikasi Dokumen"
+            title="Kategori & Klasifikasi Dokumen"
+            subtitle="Kelola kategori utama dan sub-kategori dokumen."
+        >
+            <template #actions>
+                <button
+                    type="button"
+                    class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-600/40 transition hover:from-blue-700 hover:to-blue-800"
+                    @click="openCreate"
+                >
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Tambah Kategori
+                </button>
+            </template>
+        </PageHero>
 
-        <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+        <div class="mt-5 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
             <div v-if="items.length === 0" class="py-16 text-center">
                 <p class="text-sm font-medium text-gray-500">Belum ada kategori.</p>
             </div>

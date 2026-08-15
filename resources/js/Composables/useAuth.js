@@ -33,11 +33,21 @@ export function useAuth() {
     const canSign = () => hasRole('Superadmin', 'Kaprodi', 'Dekan', 'Staf TU')
 
     const canViewFile = (arsip) => {
+        if (!user.value) return false
         if (hasRole('Superadmin')) return true
-        if (hasRole('Operator', 'Staf TU')) {
-            return arsip.divisi_id === user.value.divisi_id
-        }
         if (arsip.status_publikasi === 'Public') return true
+
+        const staffSameDivisi =
+            hasRole('Operator', 'Staf TU') && arsip.divisi_id === user.value.divisi_id
+
+        if (arsip.status_publikasi === 'Internal') {
+            return staffSameDivisi || hasRole('Dosen', 'Kaprodi', 'Dekan')
+        }
+
+        if (arsip.status_publikasi === 'Confidential') {
+            return staffSameDivisi || hasRole('Kaprodi', 'Dekan')
+        }
+
         return false
     }
 

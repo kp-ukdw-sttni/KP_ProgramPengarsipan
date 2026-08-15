@@ -6,6 +6,7 @@ import FlashMessages from '../../Components/ui/FlashMessages.vue'
 import Badge from '../../Components/ui/Badge.vue'
 import Pagination from '../../Components/ui/Pagination.vue'
 import Input from '../../Components/ui/Input.vue'
+import PageHero from '../../Components/ui/PageHero.vue'
 import Select from '../../Components/ui/Select.vue'
 import SecondaryButton from '../../Components/ui/SecondaryButton.vue'
 import { useRoute } from '../../Composables/useRoute'
@@ -103,12 +104,13 @@ const formatDate = (value) => {
     <AuthenticatedLayout title="Audit Log">
         <FlashMessages />
 
-        <div class="mb-4">
-            <h3 class="text-lg font-bold text-gray-900">Audit Log Aktivitas</h3>
-            <p class="text-xs text-gray-500">{{ props.logs.total ?? 0 }} aktivitas tercatat.</p>
-        </div>
+        <PageHero
+            eyebrow="Sistem"
+            title="Audit Log Aktivitas"
+            :subtitle="`${props.logs.total ?? 0} aktivitas tercatat`"
+        />
 
-        <div class="mb-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div class="mt-5 mb-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
             <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
                 <Select v-model="userId">
                     <option value="">Semua Pengguna</option>

@@ -21,7 +21,7 @@ class CheckArchiveRetention extends Command
      *
      * @var string
      */
-    protected $description = 'Periksa masa retensi arsip (JRA). Jika melewati batas, ubah status menjadi Expired dan batalkan izin peminjaman aktif.';
+    protected $description = 'Periksa masa retensi arsip (JRA). Jika melewati batas, ubah status menjadi Inaktif dan batalkan izin peminjaman aktif.';
 
     /**
      * Execute the console command.
@@ -43,7 +43,7 @@ class CheckArchiveRetention extends Command
 
         foreach ($expiredArsips as $arsip) {
             // Update Arsip Status
-            $arsip->update(['status' => 'Expired']);
+            $arsip->update(['status' => 'Inaktif']);
 
             // Revoke active borrowings for this archive
             Peminjaman::where('arsip_id', $arsip->id)
@@ -56,13 +56,13 @@ class CheckArchiveRetention extends Command
                 'action' => 'System Expired',
                 'arsip_id' => $arsip->id,
                 'ip_address' => '127.0.0.1',
-                'details' => "Masa retensi arsip habis. Sistem mengubah status arsip '{$arsip->judul}' (Nomor: {$arsip->nomor_arsip}) menjadi Expired.",
+                'details' => "Masa retensi arsip habis. Sistem mengubah status arsip '{$arsip->judul}' (Nomor: {$arsip->nomor_arsip}) menjadi Inaktif.",
             ]);
 
-            $this->line("- Arsip ID {$arsip->id} [{$arsip->nomor_arsip}] - '{$arsip->judul}' telah diubah ke status EXPIRED.");
+            $this->line("- Arsip ID {$arsip->id} [{$arsip->nomor_arsip}] - '{$arsip->judul}' telah diubah ke status INAKTIF.");
         }
 
-        $this->info("Pengecekan JRA selesai. Total {$count} dokumen berhasil diubah statusnya menjadi Expired.");
+        $this->info("Pengecekan JRA selesai. Total {$count} dokumen berhasil diubah statusnya menjadi Inaktif.");
         return 0;
     }
 }

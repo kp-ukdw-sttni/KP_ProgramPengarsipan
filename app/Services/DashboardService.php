@@ -16,9 +16,12 @@ class DashboardService
     public function getDashboardData(User $user): array
     {
         $totalArsip = 0;
-        $totalActivePeminjaman = 0; // Will be mapped to "Downloads/Unduhan" count for analytics
+        $totalDownloads = 0; // AuditLog "Download" actions
         $totalUsers = 0;
-        $totalExpiredArsip = 0;
+        $totalAktifArsip = 0;
+        $totalInaktifArsip = 0;
+        $totalDiarsipkanArsip = 0;
+        $totalDimusnahkanArsip = 0;
         $totalPendingPeminjaman = 0;
         $totalCompletedPeminjaman = 0;
         $divisiStats = collect();
@@ -27,9 +30,12 @@ class DashboardService
 
         if ($user->hasRole('Superadmin')) {
             $totalArsip = Arsip::count();
-            $totalActivePeminjaman = AuditLog::where('action', 'Download')->count(); // Total Unduhan
+            $totalDownloads = AuditLog::where('action', 'Download')->count(); // Total Unduhan
             $totalUsers = User::count();
-            $totalExpiredArsip = Arsip::where('status', 'Expired')->count();
+            $totalAktifArsip = Arsip::where('status', 'Aktif')->count();
+            $totalInaktifArsip = Arsip::where('status', 'Inaktif')->count();
+            $totalDiarsipkanArsip = Arsip::where('status', 'Diarsipkan')->count();
+            $totalDimusnahkanArsip = Arsip::where('status', 'Dimusnahkan')->count();
             $totalPendingPeminjaman = Peminjaman::where('status_approval', 'Pending')->count();
             $totalCompletedPeminjaman = Peminjaman::where('status_approval', 'Approved')
                 ->where('expired_at', '<=', now())
@@ -45,13 +51,16 @@ class DashboardService
             $divisiId = $user->divisi_id;
 
             $totalArsip = Arsip::where('divisi_id', $divisiId)->count();
-            $totalActivePeminjaman = AuditLog::where('action', 'Download')
+            $totalDownloads = AuditLog::where('action', 'Download')
                 ->whereHas('arsip', function ($query) use ($divisiId) {
                     $query->where('divisi_id', $divisiId);
                 })
                 ->count();
             $totalUsers = User::where('divisi_id', $divisiId)->count();
-            $totalExpiredArsip = Arsip::where('divisi_id', $divisiId)->where('status', 'Expired')->count();
+            $totalAktifArsip = Arsip::where('divisi_id', $divisiId)->where('status', 'Aktif')->count();
+            $totalInaktifArsip = Arsip::where('divisi_id', $divisiId)->where('status', 'Inaktif')->count();
+            $totalDiarsipkanArsip = Arsip::where('divisi_id', $divisiId)->where('status', 'Diarsipkan')->count();
+            $totalDimusnahkanArsip = Arsip::where('divisi_id', $divisiId)->where('status', 'Dimusnahkan')->count();
             $totalPendingPeminjaman = Peminjaman::whereHas('arsip', function ($query) use ($divisiId) {
                 $query->where('divisi_id', $divisiId);
             })
@@ -75,7 +84,11 @@ class DashboardService
             $divisiStats = Divisi::where('id', $divisiId)->withCount('arsip')->get();
         } else {
             // Karyawan / Employee
-            $totalArsip = Arsip::where('status', 'Aktif')->count();
+            $totalAktifArsip = Arsip::where('status', 'Aktif')->count();
+            $totalArsip = $totalAktifArsip;
+            $totalInaktifArsip = Arsip::where('status', 'Inaktif')->count();
+            $totalDiarsipkanArsip = Arsip::where('status', 'Diarsipkan')->count();
+            $totalDimusnahkanArsip = Arsip::where('status', 'Dimusnahkan')->count();
 
             $myActivePeminjaman = Peminjaman::where('user_id', $user->id)
                 ->where('status_approval', 'Approved')
@@ -83,8 +96,7 @@ class DashboardService
                 ->with('arsip')
                 ->get();
 
-            $totalActivePeminjaman = AuditLog::where('user_id', $user->id)->where('action', 'Download')->count(); // Personal Downloads
-            $totalExpiredArsip = Arsip::where('status', 'Expired')->count();
+            $totalDownloads = AuditLog::where('user_id', $user->id)->where('action', 'Download')->count(); // Personal Downloads
             $totalPendingPeminjaman = Peminjaman::where('user_id', $user->id)
                 ->where('status_approval', 'Pending')
                 ->count();
@@ -113,9 +125,12 @@ class DashboardService
 
         return [
             'totalArsip' => $totalArsip,
-            'totalActivePeminjaman' => $totalActivePeminjaman,
+            'totalDownloads' => $totalDownloads,
             'totalUsers' => $totalUsers,
-            'totalExpiredArsip' => $totalExpiredArsip,
+            'totalAktifArsip' => $totalAktifArsip,
+            'totalInaktifArsip' => $totalInaktifArsip,
+            'totalDiarsipkanArsip' => $totalDiarsipkanArsip,
+            'totalDimusnahkanArsip' => $totalDimusnahkanArsip,
             'totalPendingPeminjaman' => $totalPendingPeminjaman,
             'totalCompletedPeminjaman' => $totalCompletedPeminjaman,
             'divisiStats' => $divisiStats,

@@ -4,6 +4,7 @@ import AuthenticatedLayout from '../../Layouts/AuthenticatedLayout.vue'
 import FlashMessages from '../../Components/ui/FlashMessages.vue'
 import Input from '../../Components/ui/Input.vue'
 import InputError from '../../Components/ui/InputError.vue'
+import PageHero from '../../Components/ui/PageHero.vue'
 import PrimaryButton from '../../Components/ui/PrimaryButton.vue'
 import SecondaryButton from '../../Components/ui/SecondaryButton.vue'
 import { useRoute } from '../../Composables/useRoute'
@@ -46,7 +47,13 @@ const submitPassword = () => {
     <AuthenticatedLayout title="Profil Saya">
         <FlashMessages />
 
-        <div class="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <PageHero
+            eyebrow="Akun Saya"
+            title="Profil Saya"
+            subtitle="Kelola informasi profil dan kata sandi akun Anda."
+        />
+
+        <div class="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
             <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-2">
                 <h3 class="mb-4 text-sm font-bold uppercase tracking-wide text-gray-700">
                     Informasi Profil

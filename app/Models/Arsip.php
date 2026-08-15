@@ -22,8 +22,16 @@ class Arsip extends Model
         'deskripsi',
         'kategori_id',
         'divisi_id',
+        'study_program_id',
         'tahun',
+        'tanggal_dokumen',
+        'tanggal_diterima',
+        'pengirim',
+        'penerima',
         'file_path',
+        'lokasi_fisik',
+        'file_size',
+        'file_mime',
         'retention_date',
         'status',
         'tags',
@@ -33,7 +41,10 @@ class Arsip extends Model
 
     protected $casts = [
         'retention_date' => 'date',
+        'tanggal_dokumen' => 'date',
+        'tanggal_diterima' => 'date',
         'tahun' => 'integer',
+        'file_size' => 'integer',
     ];
 
     protected static function booted()
@@ -80,6 +91,14 @@ class Arsip extends Model
     public function kategori(): BelongsTo
     {
         return $this->belongsTo(KategoriArsip::class, 'kategori_id');
+    }
+
+    /**
+     * Get the study program the archive belongs to.
+     */
+    public function studyProgram(): BelongsTo
+    {
+        return $this->belongsTo(StudyProgram::class, 'study_program_id');
     }
 
     /**

@@ -1,9 +1,10 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { router } from '@inertiajs/vue3'
+import { router, Link } from '@inertiajs/vue3'
 import AuthenticatedLayout from '../../Layouts/AuthenticatedLayout.vue'
 import FlashMessages from '../../Components/ui/FlashMessages.vue'
 import Badge from '../../Components/ui/Badge.vue'
+import PageHero from '../../Components/ui/PageHero.vue'
 import Modal from '../../Components/ui/Modal.vue'
 import Pagination from '../../Components/ui/Pagination.vue'
 import SecondaryButton from '../../Components/ui/SecondaryButton.vue'
@@ -87,14 +88,25 @@ const formatDate = (value) => {
     <AuthenticatedLayout title="Recycle Bin">
         <FlashMessages />
 
-        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-                <h3 class="text-lg font-bold text-gray-900">Recycle Bin</h3>
-                <p class="text-xs text-gray-500">Arsip yang dihapus sementara dapat dipulihkan.</p>
-            </div>
-        </div>
+        <PageHero
+            eyebrow="Arsip Dokumen"
+            title="Recycle Bin"
+            subtitle="Arsip yang dihapus sementara dapat dipulihkan."
+        >
+            <template #actions>
+                <Link
+                    :href="routeFn('arsip.index')"
+                    class="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
+                >
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                    </svg>
+                    Daftar Arsip
+                </Link>
+            </template>
+        </PageHero>
 
-        <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+        <div class="mt-5 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
             <div v-if="items.length === 0" class="py-16 text-center">
                 <svg class="mx-auto h-12 w-12 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

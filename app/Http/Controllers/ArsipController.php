@@ -37,6 +37,14 @@ class ArsipController extends Controller
     }
 
     /**
+     * Return the create form data as JSON (used by the floating upload modal).
+     */
+    public function createMeta()
+    {
+        return response()->json($this->arsipService->getCreateData(Auth::user()));
+    }
+
+    /**
      * Store multiple uploaded files as archive records in secure storage.
      */
     public function store(Request $request)
@@ -54,9 +62,15 @@ class ArsipController extends Controller
             'deskripsi' => ['nullable', 'string'],
             'kategori_id' => ['required', 'exists:kategori_arsip,id'],
             'divisi_id' => ['required', 'exists:divisi,id'],
+            'study_program_id' => ['nullable', 'exists:study_programs,id'],
             'tahun' => ['nullable', 'integer', 'min:1990', 'max:'.now()->year],
+            'tanggal_dokumen' => ['nullable', 'date'],
+            'tanggal_diterima' => ['nullable', 'date'],
+            'pengirim' => ['nullable', 'string', 'max:255'],
+            'penerima' => ['nullable', 'string', 'max:255'],
+            'lokasi_fisik' => ['nullable', 'string', 'max:255'],
             'retention_date' => ['required', 'date', 'after:today'],
-            'status_publikasi' => ['required', 'in:Public,Restricted'],
+            'status_publikasi' => ['required', 'in:Public,Internal,Confidential'],
             'tags' => ['nullable', 'string', 'max:255'],
         ]);
 
@@ -105,11 +119,17 @@ class ArsipController extends Controller
             'deskripsi' => ['nullable', 'string'],
             'kategori_id' => ['required', 'exists:kategori_arsip,id'],
             'divisi_id' => ['required', 'exists:divisi,id'],
+            'study_program_id' => ['nullable', 'exists:study_programs,id'],
             'tahun' => ['nullable', 'integer', 'min:1990', 'max:'.now()->year],
+            'tanggal_dokumen' => ['nullable', 'date'],
+            'tanggal_diterima' => ['nullable', 'date'],
+            'pengirim' => ['nullable', 'string', 'max:255'],
+            'penerima' => ['nullable', 'string', 'max:255'],
+            'lokasi_fisik' => ['nullable', 'string', 'max:255'],
             'file' => ['nullable', 'file', 'mimes:pdf,docx,jpg,jpeg,png', 'max:10240'],
             'retention_date' => ['required', 'date'],
-            'status' => ['required', 'in:Aktif,Expired,Dimusnahkan'],
-            'status_publikasi' => ['required', 'in:Public,Restricted'],
+            'status' => ['required', 'in:Aktif,Inaktif,Diarsipkan,Dimusnahkan'],
+            'status_publikasi' => ['required', 'in:Public,Internal,Confidential'],
             'tags' => ['nullable', 'string', 'max:255'],
             'change_note' => ['nullable', 'string', 'max:255'],
         ]);
@@ -205,8 +225,8 @@ class ArsipController extends Controller
             abort(403, 'Akses ditolak. Anda tidak memiliki izin untuk melihat arsip ini.');
         }
 
-        if ($arsip->status === 'Expired') {
-            abort(403, 'Akses ditolak. Masa retensi arsip ini telah habis (Expired).');
+        if (in_array($arsip->status, ['Inaktif', 'Dimusnahkan'])) {
+            abort(403, 'Akses ditolak. Arsip ini sudah tidak aktif ('.$arsip->status.').');
         }
 
         $absolutePath = Storage::disk('local')->path($arsip->file_path);
@@ -227,8 +247,8 @@ class ArsipController extends Controller
             abort(403, 'Akses ditolak. Anda tidak memiliki izin untuk mengunduh arsip ini.');
         }
 
-        if ($arsip->status === 'Expired') {
-            abort(403, 'Akses ditolak. Masa retensi arsip ini telah habis (Expired).');
+        if (in_array($arsip->status, ['Inaktif', 'Dimusnahkan'])) {
+            abort(403, 'Akses ditolak. Arsip ini sudah tidak aktif ('.$arsip->status.').');
         }
 
         $absolutePath = Storage::disk('local')->path($arsip->file_path);
@@ -257,8 +277,8 @@ class ArsipController extends Controller
             abort(403, 'Akses ditolak. Anda tidak memiliki izin untuk membuka penampil arsip ini.');
         }
 
-        if ($arsip->status === 'Expired') {
-            abort(403, 'Akses ditolak. Masa retensi arsip ini telah habis (Expired).');
+        if (in_array($arsip->status, ['Inaktif', 'Dimusnahkan'])) {
+            abort(403, 'Akses ditolak. Arsip ini sudah tidak aktif ('.$arsip->status.').');
         }
 
         return view('arsip.viewer', compact('arsip'));

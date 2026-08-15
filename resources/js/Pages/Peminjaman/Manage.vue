@@ -11,6 +11,7 @@ import InputError from '../../Components/ui/InputError.vue'
 import PrimaryButton from '../../Components/ui/PrimaryButton.vue'
 import SecondaryButton from '../../Components/ui/SecondaryButton.vue'
 import DangerButton from '../../Components/ui/DangerButton.vue'
+import PageHero from '../../Components/ui/PageHero.vue'
 import { useRoute } from '../../Composables/useRoute'
 
 const props = defineProps({
@@ -100,7 +101,13 @@ const statCards = computed(() => [
     <AuthenticatedLayout title="Persetujuan Akses">
         <FlashMessages />
 
-        <div class="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <PageHero
+            eyebrow="Akses Dokumen"
+            title="Persetujuan Akses"
+            subtitle="Kelola dan setujui pengajuan akses dokumen dari pemohon."
+        />
+
+        <div class="mt-5 mb-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div
                 v-for="card in statCards"
                 :key="card.label"

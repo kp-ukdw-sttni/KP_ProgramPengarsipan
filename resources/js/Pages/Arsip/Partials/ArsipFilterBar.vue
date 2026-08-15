@@ -19,6 +19,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    studyPrograms: {
+        type: Array,
+        default: () => [],
+    },
     tahunList: {
         type: Array,
         default: () => [],
@@ -30,6 +34,7 @@ const routeFn = useRoute()
 const search = ref(props.filters.search ?? '')
 const kategoriId = ref(props.filters.kategori_id ?? '')
 const divisiId = ref(props.filters.divisi_id ?? '')
+const studyProgramId = ref(props.filters.study_program_id ?? '')
 const tahun = ref(props.filters.tahun ?? '')
 const statusPublikasi = ref(props.filters.status_publikasi ?? '')
 const status = ref(props.filters.status ?? '')
@@ -41,6 +46,7 @@ const applyFilters = (preserve = true) => {
     if (search.value.trim()) params.search = search.value.trim()
     if (kategoriId.value) params.kategori_id = kategoriId.value
     if (divisiId.value) params.divisi_id = divisiId.value
+    if (studyProgramId.value) params.study_program_id = studyProgramId.value
     if (tahun.value) params.tahun = tahun.value
     if (statusPublikasi.value) params.status_publikasi = statusPublikasi.value
     if (status.value) params.status = status.value
@@ -58,7 +64,7 @@ watch(search, (value) => {
     searchTimer = setTimeout(() => applyFilters(false), 350)
 })
 
-watch([kategoriId, divisiId, tahun, statusPublikasi, status], () => {
+watch([kategoriId, divisiId, studyProgramId, tahun, statusPublikasi, status], () => {
     applyFilters(false)
 })
 
@@ -66,6 +72,7 @@ const resetFilters = () => {
     search.value = ''
     kategoriId.value = ''
     divisiId.value = ''
+    studyProgramId.value = ''
     tahun.value = ''
     statusPublikasi.value = ''
     status.value = ''
@@ -76,6 +83,7 @@ const hasActiveFilters = () =>
     search.value.trim() !== '' ||
     kategoriId.value !== '' ||
     divisiId.value !== '' ||
+    studyProgramId.value !== '' ||
     tahun.value !== '' ||
     statusPublikasi.value !== '' ||
     status.value !== ''
@@ -85,6 +93,7 @@ onMounted(() => {
         search.value = props.filters.search ?? ''
         kategoriId.value = props.filters.kategori_id ?? ''
         divisiId.value = props.filters.divisi_id ?? ''
+        studyProgramId.value = props.filters.study_program_id ?? ''
         tahun.value = props.filters.tahun ?? ''
         statusPublikasi.value = props.filters.status_publikasi ?? ''
         status.value = props.filters.status ?? ''
@@ -113,7 +122,7 @@ onMounted(() => {
                             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
                         </svg>
                     </div>
-                    <Input v-model="search" type="text" class="pl-9" placeholder="Cari judul, nomor arsip/surat, tags..." />
+                    <Input v-model="search" type="text" class="pl-9" placeholder="Cari judul, nomor arsip/surat, pengirim, penerima..." />
                 </div>
             </div>
 
@@ -136,6 +145,14 @@ onMounted(() => {
             </div>
 
             <div>
+                <label class="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-gray-500">Program Studi</label>
+                <Select v-model="studyProgramId">
+                    <option value="">Semua Program Studi</option>
+                    <option v-for="sp in studyPrograms" :key="sp.id" :value="sp.id">{{ sp.name }}</option>
+                </Select>
+            </div>
+
+            <div>
                 <label class="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-gray-500">Tahun</label>
                 <Select v-model="tahun">
                     <option value="">Semua Tahun</option>
@@ -148,7 +165,8 @@ onMounted(() => {
                 <Select v-model="statusPublikasi">
                     <option value="">Semua Publikasi</option>
                     <option value="Public">Public</option>
-                    <option value="Restricted">Restricted</option>
+                    <option value="Internal">Internal</option>
+                    <option value="Confidential">Confidential</option>
                 </Select>
             </div>
 
@@ -157,7 +175,8 @@ onMounted(() => {
                 <Select v-model="status">
                     <option value="">Semua Status</option>
                     <option value="Aktif">Aktif</option>
-                    <option value="Expired">Expired</option>
+                    <option value="Inaktif">Inaktif</option>
+                    <option value="Diarsipkan">Diarsipkan</option>
                     <option value="Dimusnahkan">Dimusnahkan</option>
                 </Select>
             </div>

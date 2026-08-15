@@ -7,6 +7,7 @@ use App\Models\ArsipVersion;
 use App\Models\Divisi;
 use App\Models\KategoriArsip;
 use App\Models\Peminjaman;
+use App\Models\StudyProgram;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -19,7 +20,7 @@ class ArsipService
      */
     public function getIndexData(Request $request, User $user): array
     {
-        $query = Arsip::with(['divisi', 'kategori', 'uploader']);
+        $query = Arsip::with(['divisi', 'kategori', 'uploader', 'studyProgram']);
 
         // ===== Instant Search & Multi-Filter =====
         if ($request->filled('search')) {
@@ -28,6 +29,8 @@ class ArsipService
                 $q->where('judul', 'like', '%'.$search.'%')
                     ->orWhere('nomor_arsip', 'like', '%'.$search.'%')
                     ->orWhere('nomor_surat', 'like', '%'.$search.'%')
+                    ->orWhere('pengirim', 'like', '%'.$search.'%')
+                    ->orWhere('penerima', 'like', '%'.$search.'%')
                     ->orWhere('tags', 'like', '%'.$search.'%');
             });
         }
@@ -44,6 +47,10 @@ class ArsipService
                         Divisi::where('parent_id', $request->divisi_id)->pluck('id')
                     );
             });
+        }
+
+        if ($request->filled('study_program_id')) {
+            $query->where('study_program_id', $request->study_program_id);
         }
 
         if ($request->filled('tahun')) {
@@ -72,10 +79,11 @@ class ArsipService
 
         return [
             'arsip' => $arsip,
-            'filters' => $request->only(['search', 'kategori_id', 'divisi_id', 'tahun', 'status_publikasi', 'status']),
+            'filters' => $request->only(['search', 'kategori_id', 'divisi_id', 'study_program_id', 'tahun', 'status_publikasi', 'status']),
             'kategori' => KategoriArsip::orderBy('name')->get(),
             'kategoriTree' => $this->kategoriTree(),
             'divisiTree' => $this->divisiTree(),
+            'studyPrograms' => StudyProgram::orderBy('name')->get(),
             'tahunList' => $this->tahunList(),
             'activePeminjaman' => $activePeminjaman,
         ];
@@ -89,6 +97,7 @@ class ArsipService
         return [
             'divisiTree' => $this->divisiTree($user->hasRole('Operator') || $user->hasRole('Staf TU')),
             'kategoriTree' => $this->kategoriTree(),
+            'studyPrograms' => StudyProgram::orderBy('name')->get(),
             'tahunList' => $this->tahunList(),
         ];
     }
@@ -120,8 +129,16 @@ class ArsipService
                 'deskripsi' => $request->deskripsi,
                 'kategori_id' => $request->kategori_id,
                 'divisi_id' => $request->divisi_id,
+                'study_program_id' => $request->study_program_id,
                 'tahun' => $tahun,
+                'tanggal_dokumen' => $request->tanggal_dokumen,
+                'tanggal_diterima' => $request->tanggal_diterima ?: now()->toDateString(),
+                'pengirim' => $request->pengirim,
+                'penerima' => $request->penerima,
                 'file_path' => $filePath,
+                'lokasi_fisik' => $request->lokasi_fisik,
+                'file_size' => $file->getSize(),
+                'file_mime' => $file->getMimeType(),
                 'retention_date' => $request->retention_date,
                 'status' => 'Aktif',
                 'status_publikasi' => $request->status_publikasi,
@@ -141,9 +158,10 @@ class ArsipService
     public function getEditData(Arsip $arsip, User $user): array
     {
         return [
-            'arsip' => $arsip->load(['divisi', 'kategori']),
+            'arsip' => $arsip->load(['divisi', 'kategori', 'studyProgram']),
             'divisiTree' => $this->divisiTree($user->hasRole('Operator') || $user->hasRole('Staf TU')),
             'kategoriTree' => $this->kategoriTree(),
+            'studyPrograms' => StudyProgram::orderBy('name')->get(),
             'tahunList' => $this->tahunList(),
         ];
     }
@@ -160,7 +178,13 @@ class ArsipService
             'deskripsi' => $request->deskripsi,
             'kategori_id' => $request->kategori_id,
             'divisi_id' => $request->divisi_id,
+            'study_program_id' => $request->study_program_id,
             'tahun' => $request->tahun ?: now()->year,
+            'tanggal_dokumen' => $request->tanggal_dokumen,
+            'tanggal_diterima' => $request->tanggal_diterima,
+            'pengirim' => $request->pengirim,
+            'penerima' => $request->penerima,
+            'lokasi_fisik' => $request->lokasi_fisik,
             'retention_date' => $request->retention_date,
             'status' => $request->status,
             'status_publikasi' => $request->status_publikasi,
@@ -184,6 +208,8 @@ class ArsipService
             $fileSubPath = 'private/archives/'.$request->divisi_id.'/'.($request->tahun ?: now()->year);
             $filePath = Storage::disk('local')->putFileAs($fileSubPath, $file, $fileName);
             $data['file_path'] = $filePath;
+            $data['file_size'] = $file->getSize();
+            $data['file_mime'] = $file->getMimeType();
         }
 
         $arsip->update($data);
@@ -301,15 +327,24 @@ class ArsipService
      */
     public function canAccessFile(Arsip $arsip, User $user): bool
     {
-        if ($arsip->status_publikasi === 'Public') {
-            return true;
-        }
-
         if ($user->hasRole('Superadmin')) {
             return true;
         }
 
-        if (($user->hasRole('Operator') || $user->hasRole('Staf TU')) && $arsip->divisi_id == $user->divisi_id) {
+        if ($arsip->status_publikasi === 'Public') {
+            return true;
+        }
+
+        $staffSameDivisi = ($user->hasRole('Operator') || $user->hasRole('Staf TU'))
+            && $arsip->divisi_id == $user->divisi_id;
+
+        if ($arsip->status_publikasi === 'Internal'
+            && ($staffSameDivisi || $user->hasRole('Dosen') || $user->hasRole('Kaprodi') || $user->hasRole('Dekan'))) {
+            return true;
+        }
+
+        if ($arsip->status_publikasi === 'Confidential'
+            && ($staffSameDivisi || $user->hasRole('Kaprodi') || $user->hasRole('Dekan'))) {
             return true;
         }
 

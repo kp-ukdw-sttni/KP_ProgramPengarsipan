@@ -1,6 +1,7 @@
 <script setup>
 import { Link } from '@inertiajs/vue3'
 import AuthenticatedLayout from '../../Layouts/AuthenticatedLayout.vue'
+import PageHero from '../../Components/ui/PageHero.vue'
 import FolderTree from './Partials/FolderTree.vue'
 import { useRoute } from '../../Composables/useRoute'
 
@@ -16,26 +17,34 @@ const routeFn = useRoute()
 
 <template>
     <AuthenticatedLayout title="Jelajah Folder">
-        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-                <h3 class="text-lg font-bold text-gray-900">Jelajah Folder Arsip</h3>
-                <p class="text-xs text-gray-500">
-                    Navigasi: Fakultas &rarr; Program Studi &rarr; Tahun &rarr; Jenis Dokumen
-                </p>
-            </div>
-            <Link
-                :href="routeFn('arsip.index')"
-                class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"
-            >
-                Kembali ke Daftar
-            </Link>
-        </div>
+        <PageHero
+            eyebrow="Arsip Dokumen"
+            title="Jelajah Folder Arsip"
+            :subtitle="`Navigasi hierarki: Fakultas → Program Studi → Tahun → Jenis Dokumen. ${tree.length} folder utama tersedia.`"
+        >
+            <template #actions>
+                <Link
+                    :href="routeFn('arsip.index')"
+                    class="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
+                >
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                    </svg>
+                    Kembali ke Daftar
+                </Link>
+            </template>
+        </PageHero>
 
-        <div class="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <div class="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
             <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm lg:col-span-1">
-                <h4 class="mb-3 px-2 text-xs font-bold uppercase tracking-wide text-gray-500">
-                    Struktur Folder
-                </h4>
+                <div class="mb-3 flex items-center justify-between px-2">
+                    <h4 class="text-xs font-bold uppercase tracking-wide text-gray-500">
+                        Struktur Folder
+                    </h4>
+                    <span class="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-600">
+                        {{ tree.length }}
+                    </span>
+                </div>
                 <ul v-if="tree.length" class="space-y-0.5">
                     <FolderTree v-for="node in tree" :key="node.id" :node="node" :depth="0" />
                 </ul>

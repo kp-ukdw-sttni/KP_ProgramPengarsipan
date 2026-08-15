@@ -10,7 +10,7 @@ const props = defineProps({
 </script>
 
 <template>
-    <div class="flex min-h-screen flex-col bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800">
+    <div class="flex min-h-screen flex-col bg-gradient-to-br from-navy via-navy-dark to-[#0A1120]">
         <div class="flex flex-1 flex-col items-center justify-center px-4 py-12">
             <Link :href="route('dashboard')" class="mb-8 flex items-center gap-3">
                 <img
@@ -20,7 +20,7 @@ const props = defineProps({
                 />
                 <div class="leading-tight">
                     <h1 class="text-lg font-extrabold text-white">E-Archive STTNI</h1>
-                    <p class="text-[11px] font-medium text-blue-200">Sistem Pengarsipan Dokumen</p>
+                    <p class="text-[11px] font-medium text-gold-light">Sistem Pengarsipan Dokumen</p>
                 </div>
             </Link>
 

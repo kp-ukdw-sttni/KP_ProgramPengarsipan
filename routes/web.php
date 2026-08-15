@@ -35,6 +35,7 @@ Route::middleware(['auth', 'check.status'])->group(function () {
     Route::get('/arsip/{arsip}/view', [ArsipController::class, 'viewDocument'])->name('arsip.view');
 
     Route::middleware(['role:Superadmin|Operator|Staf TU'])->group(function () {
+        Route::get('/arsip/meta', [ArsipController::class, 'createMeta'])->name('arsip.meta');
         Route::get('/arsip/create', [ArsipController::class, 'create'])->name('arsip.create');
         Route::post('/arsip', [ArsipController::class, 'store'])->name('arsip.store');
         Route::get('/arsip/{arsip}/edit', [ArsipController::class, 'edit'])->name('arsip.edit');

@@ -5,6 +5,7 @@ import FlashMessages from '../../Components/ui/FlashMessages.vue'
 import Input from '../../Components/ui/Input.vue'
 import Select from '../../Components/ui/Select.vue'
 import InputError from '../../Components/ui/InputError.vue'
+import PageHero from '../../Components/ui/PageHero.vue'
 import PrimaryButton from '../../Components/ui/PrimaryButton.vue'
 import SecondaryButton from '../../Components/ui/SecondaryButton.vue'
 import { Link } from '@inertiajs/vue3'
@@ -39,9 +40,26 @@ const submit = () => {
     <AuthenticatedLayout title="Edit Kategori">
         <FlashMessages />
 
-        <div class="mx-auto max-w-2xl">
+        <PageHero
+            eyebrow="Klasifikasi Dokumen"
+            title="Edit Kategori"
+            subtitle="Perbarui detail kategori dokumen."
+        >
+            <template #actions>
+                <Link
+                    :href="routeFn('kategori.index')"
+                    class="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
+                >
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                    </svg>
+                    Kembali ke Daftar
+                </Link>
+            </template>
+        </PageHero>
+
+        <div class="mx-auto mt-6 max-w-2xl">
             <form @submit.prevent="submit" class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-                <h3 class="mb-4 text-sm font-bold uppercase tracking-wide text-gray-700">Edit Kategori</h3>
 
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>

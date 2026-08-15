@@ -3,8 +3,11 @@ import { computed, ref } from 'vue'
 import { Link, Head, router } from '@inertiajs/vue3'
 import { useAuth } from '../Composables/useAuth'
 import { useRoute } from '../Composables/useRoute'
+import { useUploadModal } from '../Composables/useUploadModal'
+import { useSidebar } from '../Composables/useSidebar'
 import NavContent from './Partials/NavContent.vue'
 import UploadFeedback from '../Components/ui/UploadFeedback.vue'
+import ArsipUploadModal from '../Components/ArsipUploadModal.vue'
 
 const props = defineProps({
     title: {
@@ -18,6 +21,13 @@ const routeFn = useRoute()
 
 const mobileMenuOpen = ref(false)
 const userMenuOpen = ref(false)
+const { state: uploadModal, open: openUploadModal } = useUploadModal()
+const { collapsed, toggle: toggleSidebar } = useSidebar()
+
+const handleOpenUpload = () => {
+    mobileMenuOpen.value = false
+    openUploadModal()
+}
 
 const isActive = (...names) => names.some((name) => routeFn().current(name))
 
@@ -69,14 +79,36 @@ const vClickOutside = {
 
     <div class="flex min-h-screen bg-gray-50 text-gray-900">
         <!-- Desktop Sidebar -->
-        <aside class="hidden md:flex md:w-64 md:shrink-0 md:flex-col bg-[#181c32] text-gray-300">
+        <aside
+            class="hidden shrink-0 flex-col bg-navy-dark text-gray-300 transition-all duration-300 ease-in-out md:flex"
+            :class="collapsed ? 'md:w-20' : 'md:w-64'"
+        >
             <NavContent
                 :can-upload="canUpload"
                 :can-approve="canApprove"
                 :can-admin="canAdmin"
                 :can-manage-users="canManageUsers"
+                :collapsed="collapsed"
                 :is-active="isActive"
+                @upload="handleOpenUpload"
             />
+
+            <!-- Collapse toggle -->
+            <div class="shrink-0 border-t border-white/10 p-2">
+                <button
+                    type="button"
+                    class="mx-auto flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition hover:bg-white/10 hover:text-white"
+                    :title="collapsed ? 'Perluas menu' : 'Ciutkan menu'"
+                    @click="toggleSidebar"
+                >
+                    <svg v-if="collapsed" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75" />
+                    </svg>
+                    <svg v-else class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15m0 0l6.75 6.75M4.5 12l6.75-6.75" />
+                    </svg>
+                </button>
+            </div>
         </aside>
 
         <!-- Mobile Drawer -->
@@ -106,7 +138,7 @@ const vClickOutside = {
             >
                 <div
                     v-if="mobileMenuOpen"
-                    class="fixed inset-y-0 left-0 z-50 w-full max-w-xs bg-[#181c32] md:hidden"
+                    class="fixed inset-y-0 left-0 z-50 w-full max-w-xs bg-navy-dark md:hidden"
                 >
                     <div class="absolute right-3 top-3 z-10">
                         <button
@@ -124,8 +156,10 @@ const vClickOutside = {
                         :can-approve="canApprove"
                         :can-admin="canAdmin"
                         :can-manage-users="canManageUsers"
+                        :collapsed="false"
                         :is-active="isActive"
                         @navigate="mobileMenuOpen = false"
+                        @upload="handleOpenUpload"
                     />
                 </div>
             </Transition>
@@ -133,6 +167,7 @@ const vClickOutside = {
 
         <!-- Main Column -->
         <div class="flex min-w-0 flex-1 flex-col">
+            <div class="h-1 shrink-0 bg-gradient-to-r from-gold via-blue-600 to-navy" />
             <!-- Topbar -->
             <header class="shrink-0 border-b border-gray-200 bg-white px-4 py-3.5 sm:px-6 md:px-8">
                 <div class="flex items-center justify-between">
@@ -226,4 +261,5 @@ const vClickOutside = {
     </div>
 
     <UploadFeedback />
+    <ArsipUploadModal :show="uploadModal.open" @close="uploadModal.open = false" />
 </template>

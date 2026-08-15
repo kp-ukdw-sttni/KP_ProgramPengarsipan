@@ -7,7 +7,7 @@ import Badge from '../../Components/ui/Badge.vue'
 import Pagination from '../../Components/ui/Pagination.vue'
 import Input from '../../Components/ui/Input.vue'
 import Select from '../../Components/ui/Select.vue'
-import PrimaryButton from '../../Components/ui/PrimaryButton.vue'
+import PageHero from '../../Components/ui/PageHero.vue'
 import { useRoute } from '../../Composables/useRoute'
 
 const props = defineProps({
@@ -81,17 +81,25 @@ const statusBadge = (status) => {
     <AuthenticatedLayout title="Manajemen Pengguna">
         <FlashMessages />
 
-        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-                <h3 class="text-lg font-bold text-gray-900">Manajemen Pengguna</h3>
-                <p class="text-xs text-gray-500">{{ props.users.total ?? 0 }} pengguna terdaftar.</p>
-            </div>
-            <PrimaryButton type="button" @click="routeFn('users.create')">
-                <Link :href="routeFn('users.create')" class="text-white">Tambah Pengguna</Link>
-            </PrimaryButton>
-        </div>
+        <PageHero
+            eyebrow="Manajemen"
+            title="Manajemen Pengguna"
+            :subtitle="`${props.users.total ?? 0} pengguna terdaftar`"
+        >
+            <template #actions>
+                <Link
+                    :href="routeFn('users.create')"
+                    class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-600/40 transition hover:from-blue-700 hover:to-blue-800"
+                >
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Tambah Pengguna
+                </Link>
+            </template>
+        </PageHero>
 
-        <div class="mb-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div class="mt-5 mb-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
             <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
                 <Input v-model="search" type="text" placeholder="Cari nama, email, atau NIK/NIM..." />
                 <Select v-model="role">

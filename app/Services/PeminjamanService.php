@@ -28,11 +28,11 @@ class PeminjamanService
      */
     public function requestAccess(Arsip $arsip, User $user): array
     {
-        if ($arsip->status === 'Expired') {
+        if (in_array($arsip->status, ['Inaktif', 'Dimusnahkan'])) {
             return [
                 'target' => 'back',
                 'success' => false,
-                'message' => 'Dokumen tidak dapat dipinjam karena masa retensi telah habis.',
+                'message' => 'Dokumen tidak dapat dipinjam karena status arsip ini '.$arsip->status.'.',
             ];
         }
 

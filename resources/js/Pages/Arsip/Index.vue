@@ -9,11 +9,13 @@ import Pagination from '../../Components/ui/Pagination.vue'
 import PrimaryButton from '../../Components/ui/PrimaryButton.vue'
 import SecondaryButton from '../../Components/ui/SecondaryButton.vue'
 import DangerButton from '../../Components/ui/DangerButton.vue'
+import PageHero from '../../Components/ui/PageHero.vue'
 import PdfPreviewModal from '../../Components/PdfPreviewModal.vue'
 import ArsipFilterBar from './Partials/ArsipFilterBar.vue'
 import { useAuth } from '../../Composables/useAuth'
 import { useRoute } from '../../Composables/useRoute'
 import { useUploadFeedback } from '../../Composables/useUploadFeedback'
+import { useUploadModal } from '../../Composables/useUploadModal'
 
 const props = defineProps({
     arsip: {
@@ -36,6 +38,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    studyPrograms: {
+        type: Array,
+        default: () => [],
+    },
     tahunList: {
         type: Array,
         default: () => [],
@@ -49,6 +55,7 @@ const props = defineProps({
 const { user, hasRole, canManageArsip, canViewFile } = useAuth()
 const routeFn = useRoute()
 const { start: feedbackStart, success: feedbackSuccess, error: feedbackError } = useUploadFeedback()
+const { open: openUploadModal } = useUploadModal()
 
 const items = computed(() => props.arsip.data ?? [])
 const paginationLinks = computed(() => props.arsip.links ?? [])
@@ -72,15 +79,20 @@ const formatDate = (value) => {
     }).format(date)
 }
 
-const publikasiBadge = (arsip) =>
-    arsip.status_publikasi === 'Public'
-        ? { label: 'Public', color: 'green' }
-        : { label: 'Restricted', color: 'amber' }
+const publikasiBadge = (arsip) => {
+    const map = {
+        Public: { label: 'Public', color: 'green' },
+        Internal: { label: 'Internal', color: 'blue' },
+        Confidential: { label: 'Confidential', color: 'red' },
+    }
+    return map[arsip.status_publikasi] ?? { label: arsip.status_publikasi ?? '-', color: 'gray' }
+}
 
 const statusBadge = (arsip) => {
     const map = {
         Aktif: { label: 'Aktif', color: 'green' },
-        Expired: { label: 'Expired', color: 'red' },
+        Inaktif: { label: 'Inaktif', color: 'amber' },
+        Diarsipkan: { label: 'Diarsipkan', color: 'blue' },
         Dimusnahkan: { label: 'Dimusnahkan', color: 'gray' },
     }
     return map[arsip.status] ?? { label: arsip.status, color: 'gray' }
@@ -136,36 +148,39 @@ const performDelete = () => {
     <AuthenticatedLayout title="Daftar Arsip">
         <FlashMessages />
 
-        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-                <h3 class="text-lg font-bold text-gray-900">Dokumen Tersimpan</h3>
-                <p class="text-xs text-gray-500">
-                    {{ props.arsip.total ?? 0 }} arsip ditemukan
-                </p>
-            </div>
-            <div v-if="hasRole('Superadmin', 'Operator', 'Staf TU')" class="flex items-center gap-2">
-                <Link
-                    :href="routeFn('arsip.create')"
-                    class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
-                >
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-                    </svg>
-                    Arsipkan Dokumen
-                </Link>
-                <Link
-                    :href="routeFn('arsip.explorer')"
-                    class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"
-                >
-                    Jelajah Folder
-                </Link>
-            </div>
-        </div>
+        <PageHero
+            eyebrow="Arsip Dokumen"
+            title="Dokumen Tersimpan"
+            :subtitle="`${props.arsip.total ?? 0} arsip ditemukan`"
+        >
+            <template #actions>
+                <div v-if="hasRole('Superadmin', 'Operator', 'Staf TU')" class="flex flex-wrap items-center gap-2">
+                    <button
+                        type="button"
+                        class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-600/40 transition hover:from-blue-700 hover:to-blue-800"
+                        @click="openUploadModal"
+                    >
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Arsipkan Dokumen
+                    </button>
+                    <Link
+                        :href="routeFn('arsip.explorer')"
+                        class="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
+                    >
+                        Jelajah Folder
+                    </Link>
+                </div>
+            </template>
+        </PageHero>
 
         <ArsipFilterBar
+            class="mt-5"
             :filters="filters"
             :kategori="kategori"
             :divisi-tree="divisiTree"
+            :study-programs="studyPrograms"
             :tahun-list="tahunList"
         />
 
@@ -221,6 +236,9 @@ const performDelete = () => {
                                     {{ item.kategori?.name ?? '-' }}
                                 </div>
                                 <div class="mt-1 text-[11px] text-gray-400">{{ item.divisi?.name ?? '-' }}</div>
+                                <div v-if="item.study_program_id" class="mt-1 text-[11px] font-medium text-indigo-500">
+                                    {{ item.study_program?.name ?? '-' }}
+                                </div>
                             </td>
                             <td class="px-5 py-4 align-middle text-xs font-semibold text-gray-600">
                                 {{ item.tahun ?? '-' }}

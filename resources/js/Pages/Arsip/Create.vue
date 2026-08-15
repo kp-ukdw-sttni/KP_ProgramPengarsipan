@@ -5,6 +5,7 @@ import FlashMessages from '../../Components/ui/FlashMessages.vue'
 import Input from '../../Components/ui/Input.vue'
 import Select from '../../Components/ui/Select.vue'
 import InputError from '../../Components/ui/InputError.vue'
+import PageHero from '../../Components/ui/PageHero.vue'
 import PrimaryButton from '../../Components/ui/PrimaryButton.vue'
 import SecondaryButton from '../../Components/ui/SecondaryButton.vue'
 import UploadDropzone from '../../Components/UploadDropzone.vue'
@@ -18,6 +19,10 @@ const props = defineProps({
         default: () => [],
     },
     kategoriTree: {
+        type: Array,
+        default: () => [],
+    },
+    studyPrograms: {
         type: Array,
         default: () => [],
     },
@@ -51,9 +56,15 @@ const form = useForm({
     deskripsi: '',
     kategori_id: '',
     divisi_id: '',
+    study_program_id: '',
     tahun: '',
+    tanggal_dokumen: '',
+    tanggal_diterima: '',
+    pengirim: '',
+    penerima: '',
+    lokasi_fisik: '',
     retention_date: '',
-    status_publikasi: 'Restricted',
+    status_publikasi: 'Internal',
     tags: '',
 })
 
@@ -94,6 +105,25 @@ const submit = () => {
     <AuthenticatedLayout title="Arsipkan Dokumen">
         <FlashMessages />
 
+        <PageHero
+            eyebrow="Arsip Dokumen"
+            title="Arsipkan Dokumen"
+            subtitle="Unggah berkas baru beserta metadata klasifikasinya."
+        >
+            <template #actions>
+                <Link
+                    :href="routeFn('arsip.index')"
+                    class="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
+                >
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                    </svg>
+                    Kembali ke Daftar
+                </Link>
+            </template>
+        </PageHero>
+
+        <div class="mt-6">
         <Transition
             enter-active-class="transition duration-300 ease-out"
             enter-from-class="opacity-0"
@@ -221,6 +251,17 @@ const submit = () => {
 
                             <div>
                                 <label class="mb-1 block text-[11px] font-semibold text-gray-500">
+                                    Program Studi
+                                </label>
+                                <Select v-model="form.study_program_id">
+                                    <option value="">-- Pilih Program Studi --</option>
+                                    <option v-for="sp in studyPrograms" :key="sp.id" :value="sp.id">{{ sp.name }}</option>
+                                </Select>
+                                <InputError :message="form.errors.study_program_id" />
+                            </div>
+
+                            <div>
+                                <label class="mb-1 block text-[11px] font-semibold text-gray-500">
                                     Tahun Arsip
                                 </label>
                                 <Select v-model="form.tahun">
@@ -228,6 +269,22 @@ const submit = () => {
                                     <option v-for="t in tahunList" :key="t" :value="t">{{ t }}</option>
                                 </Select>
                                 <InputError :message="form.errors.tahun" />
+                            </div>
+
+                            <div>
+                                <label class="mb-1 block text-[11px] font-semibold text-gray-500">
+                                    Tanggal Dokumen
+                                </label>
+                                <Input v-model="form.tanggal_dokumen" type="date" />
+                                <InputError :message="form.errors.tanggal_dokumen" />
+                            </div>
+
+                            <div>
+                                <label class="mb-1 block text-[11px] font-semibold text-gray-500">
+                                    Tanggal Diterima
+                                </label>
+                                <Input v-model="form.tanggal_diterima" type="date" />
+                                <InputError :message="form.errors.tanggal_diterima" />
                             </div>
 
                             <div>
@@ -243,10 +300,35 @@ const submit = () => {
                                     Status Publikasi
                                 </label>
                                 <Select v-model="form.status_publikasi">
-                                    <option value="Restricted">Restricted</option>
                                     <option value="Public">Public</option>
+                                    <option value="Internal">Internal</option>
+                                    <option value="Confidential">Confidential</option>
                                 </Select>
                                 <InputError :message="form.errors.status_publikasi" />
+                            </div>
+
+                            <div>
+                                <label class="mb-1 block text-[11px] font-semibold text-gray-500">
+                                    Pengirim <span class="font-normal text-gray-400">(opsional)</span>
+                                </label>
+                                <Input v-model="form.pengirim" type="text" />
+                                <InputError :message="form.errors.pengirim" />
+                            </div>
+
+                            <div>
+                                <label class="mb-1 block text-[11px] font-semibold text-gray-500">
+                                    Penerima <span class="font-normal text-gray-400">(opsional)</span>
+                                </label>
+                                <Input v-model="form.penerima" type="text" />
+                                <InputError :message="form.errors.penerima" />
+                            </div>
+
+                            <div class="sm:col-span-2">
+                                <label class="mb-1 block text-[11px] font-semibold text-gray-500">
+                                    Lokasi Fisik <span class="font-normal text-gray-400">(contoh: Rak 2, Boks 4A)</span>
+                                </label>
+                                <Input v-model="form.lokasi_fisik" type="text" placeholder="contoh: Rak 2, Boks 4A" />
+                                <InputError :message="form.errors.lokasi_fisik" />
                             </div>
 
                             <div class="sm:col-span-2">
@@ -311,6 +393,7 @@ const submit = () => {
                 </div>
             </div>
         </form>
+        </div>
     </AuthenticatedLayout>
 </template>
 

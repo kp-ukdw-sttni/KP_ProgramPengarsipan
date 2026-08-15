@@ -1,9 +1,10 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { router } from '@inertiajs/vue3'
+import { router, Link } from '@inertiajs/vue3'
 import AuthenticatedLayout from '../../Layouts/AuthenticatedLayout.vue'
 import FlashMessages from '../../Components/ui/FlashMessages.vue'
 import Badge from '../../Components/ui/Badge.vue'
+import PageHero from '../../Components/ui/PageHero.vue'
 import Modal from '../../Components/ui/Modal.vue'
 import Pagination from '../../Components/ui/Pagination.vue'
 import SecondaryButton from '../../Components/ui/SecondaryButton.vue'
@@ -74,12 +75,25 @@ const performCancel = () => {
     <AuthenticatedLayout title="Pengajuan Akses Saya">
         <FlashMessages />
 
-        <div class="mb-4">
-            <h3 class="text-lg font-bold text-gray-900">Riwayat Pengajuan Akses</h3>
-            <p class="text-xs text-gray-500">Daftar permintaan akses dokumen yang Anda ajukan.</p>
-        </div>
+        <PageHero
+            eyebrow="Akses Dokumen"
+            title="Riwayat Pengajuan Akses"
+            subtitle="Daftar permintaan akses dokumen yang Anda ajukan."
+        >
+            <template #actions>
+                <Link
+                    :href="routeFn('arsip.index')"
+                    class="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
+                >
+                    Jelajah Dokumen
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                    </svg>
+                </Link>
+            </template>
+        </PageHero>
 
-        <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+        <div class="mt-5 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
             <div v-if="items.length === 0" class="py-16 text-center">
                 <p class="text-sm font-medium text-gray-500">Belum ada pengajuan akses.</p>
             </div>
