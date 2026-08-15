@@ -56,6 +56,8 @@ const canApprove = computed(() =>
 )
 const canAdmin = computed(() => hasRole('Superadmin', 'Operator', 'Staf TU'))
 const canManageUsers = computed(() => hasRole('Superadmin'))
+const canPresensi = computed(() => hasRole('Sie Kesiswaan', 'Superadmin'))
+const canReviewPresensi = computed(() => hasRole('Superadmin'))
 
 const logout = () => {
     router.post(routeFn('logout'))
@@ -88,6 +90,8 @@ const vClickOutside = {
                 :can-approve="canApprove"
                 :can-admin="canAdmin"
                 :can-manage-users="canManageUsers"
+                :can-presensi="canPresensi"
+                :can-review-presensi="canReviewPresensi"
                 :collapsed="collapsed"
                 :is-active="isActive"
                 @upload="handleOpenUpload"
@@ -156,6 +160,8 @@ const vClickOutside = {
                         :can-approve="canApprove"
                         :can-admin="canAdmin"
                         :can-manage-users="canManageUsers"
+                        :can-presensi="canPresensi"
+                        :can-review-presensi="canReviewPresensi"
                         :collapsed="false"
                         :is-active="isActive"
                         @navigate="mobileMenuOpen = false"

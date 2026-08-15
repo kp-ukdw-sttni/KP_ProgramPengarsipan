@@ -11,7 +11,7 @@ const props = defineProps({
         type: Object,
         default: () => ({}),
     },
-    kategori: {
+    kategoriTree: {
         type: Array,
         default: () => [],
     },
@@ -114,7 +114,7 @@ onMounted(() => {
             </span>
         </div>
         <div class="grid grid-cols-1 gap-3.5 md:grid-cols-2 lg:grid-cols-4">
-            <div class="lg:col-span-1">
+            <div class="md:col-span-2 lg:col-span-4">
                 <label class="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-gray-500">Pencarian</label>
                 <div class="relative">
                     <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -130,7 +130,12 @@ onMounted(() => {
                 <label class="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-gray-500">Kategori</label>
                 <Select v-model="kategoriId">
                     <option value="">Semua Kategori</option>
-                    <option v-for="k in kategori" :key="k.id" :value="k.id">{{ k.name }}</option>
+                    <template v-for="parent in kategoriTree" :key="parent.id">
+                        <optgroup v-if="parent.children?.length" :label="parent.name">
+                            <option v-for="c in parent.children" :key="c.id" :value="c.id">{{ c.name }}</option>
+                        </optgroup>
+                        <option v-else :value="parent.id">{{ parent.name }}</option>
+                    </template>
                 </Select>
             </div>
 
@@ -138,9 +143,12 @@ onMounted(() => {
                 <label class="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-gray-500">Divisi</label>
                 <Select v-model="divisiId">
                     <option value="">Semua Divisi</option>
-                    <optgroup v-for="f in divisiTree" :key="f.id" :label="f.name">
-                        <option v-for="c in f.children" :key="c.id" :value="c.id">{{ c.name }}</option>
-                    </optgroup>
+                    <template v-for="f in divisiTree" :key="f.id">
+                        <optgroup v-if="f.children?.length" :label="f.name">
+                            <option v-for="c in f.children" :key="c.id" :value="c.id">{{ c.name }}</option>
+                        </optgroup>
+                        <option v-else :value="f.id">{{ f.name }}</option>
+                    </template>
                 </Select>
             </div>
 

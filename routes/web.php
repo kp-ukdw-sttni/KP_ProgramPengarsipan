@@ -7,6 +7,8 @@ use App\Http\Controllers\KategoriController;
 use App\Http\Controllers\PeminjamanController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\UkmController;
+use App\Http\Controllers\PresensiUkmController;
 use Illuminate\Support\Facades\Route;
 
 // Redirect root to dashboard
@@ -87,6 +89,38 @@ Route::middleware(['auth', 'check.status'])->group(function () {
         Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
         Route::post('/users/import-csv', [UserController::class, 'importCsv'])->name('users.import_csv');
+    });
+
+    // ============================================================
+    // PRESENSI UKM (Sie Kesiswaan)
+    // ============================================================
+    Route::middleware(['role:Sie Kesiswaan|Superadmin'])->group(function () {
+        Route::get('/ukm', [UkmController::class, 'index'])->name('ukm.index');
+        Route::get('/ukm/create', [UkmController::class, 'create'])->name('ukm.create');
+        Route::post('/ukm', [UkmController::class, 'store'])->name('ukm.store');
+        Route::get('/ukm/{ukm}/edit', [UkmController::class, 'edit'])->name('ukm.edit');
+        Route::put('/ukm/{ukm}', [UkmController::class, 'update'])->name('ukm.update');
+        Route::delete('/ukm/{ukm}', [UkmController::class, 'destroy'])->name('ukm.destroy');
+        Route::post('/ukm/{ukm}/anggota', [UkmController::class, 'storeAnggota'])->name('ukm.anggota.store');
+        Route::put('/ukm/{ukm}/anggota/{anggota}', [UkmController::class, 'updateAnggota'])->name('ukm.anggota.update');
+        Route::delete('/ukm/{ukm}/anggota/{anggota}', [UkmController::class, 'destroyAnggota'])->name('ukm.anggota.destroy');
+
+        Route::get('/presensi', [PresensiUkmController::class, 'index'])->name('presensi.index');
+        Route::get('/presensi/create', [PresensiUkmController::class, 'create'])->name('presensi.create');
+        Route::post('/presensi', [PresensiUkmController::class, 'store'])->name('presensi.store');
+        Route::get('/presensi/review', [PresensiUkmController::class, 'review'])->name('presensi.review');
+        Route::get('/presensi/anggota/{ukm}', [PresensiUkmController::class, 'anggotaByUkm'])->name('presensi.anggota');
+        Route::get('/presensi/{presensi}', [PresensiUkmController::class, 'show'])->name('presensi.show');
+        Route::get('/presensi/{presensi}/pdf', [PresensiUkmController::class, 'downloadPdf'])->name('presensi.pdf');
+        Route::get('/presensi/{presensi}/excel', [PresensiUkmController::class, 'downloadExcel'])->name('presensi.excel');
+    });
+
+    // ============================================================
+    // VERIFIKASI ARSIP PRESENSI (Admin Pengarsipan / Superadmin)
+    // ============================================================
+    Route::middleware(['role:Superadmin'])->group(function () {
+        Route::post('/presensi/{presensi}/approve', [PresensiUkmController::class, 'approve'])->name('presensi.approve');
+        Route::post('/presensi/{presensi}/reject', [PresensiUkmController::class, 'reject'])->name('presensi.reject');
     });
 
     // ============================================================

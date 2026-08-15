@@ -6,6 +6,8 @@ use App\Models\User;
 use App\Models\Divisi;
 use App\Models\KategoriArsip;
 use App\Models\StudyProgram;
+use App\Models\Ukm;
+use App\Models\UkmAnggota;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
@@ -27,6 +29,7 @@ class DatabaseSeeder extends Seeder
             'Staf TU',
             'Kaprodi',
             'Dekan',
+            'Sie Kesiswaan',
         ];
         foreach ($roles as $roleName) {
             Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
@@ -101,6 +104,15 @@ class DatabaseSeeder extends Seeder
                     ['kode' => 'LAPKEU', 'name' => 'Laporan Keuangan & Audit'],
                     ['kode' => 'SDM', 'name' => 'Dokumen SDM / Kepegawaian'],
                     ['kode' => 'ASET', 'name' => 'Aset & Inventaris'],
+                ],
+            ],
+            [
+                'kode' => 'KEMA',
+                'name' => 'E. Kemahasiswaan & Kegiatan Mahasiswa',
+                'children' => [
+                    ['kode' => 'PRESENSI', 'name' => 'Presensi & Rekap UKM'],
+                    ['kode' => 'SK-BEM', 'name' => 'Kepengurusan BEM / Senat Mahasiswa'],
+                    ['kode' => 'PRESTASI', 'name' => 'Prestasi & Penghargaan Mahasiswa'],
                 ],
             ],
         ];
@@ -243,5 +255,90 @@ class DatabaseSeeder extends Seeder
             ]
         );
         $mahasiswa->assignRole('Mahasiswa');
+
+        // Sie Kesiswaan (pengisi presensi UKM)
+        $sieKesiswaan = User::updateOrCreate(
+            ['email' => 'sie.kesiswaan@sttni.ac.id'],
+            [
+                'name' => 'Sie Kesiswaan STTNI',
+                'password' => Hash::make('kesiswaan123'),
+                'divisi_id' => $divisiIds['BAAK'],
+                'nik_nim' => 'SK-001',
+                'status_akun' => 'Aktif',
+            ]
+        );
+        $sieKesiswaan->assignRole('Sie Kesiswaan');
+
+        // 6. Seed Master Data UKM & Anggota
+        $ukmData = [
+            [
+                'kode' => 'UKM-PS',
+                'name' => 'UKM Paduan Suara',
+                'pembina' => 'Bpk. Daniel', 
+                'ketua' => 'Maria S.',
+                'divisi_id' => $divisiIds['BAAK'],
+                'anggota' => [
+                    ['nama' => 'Maria S.', 'nim' => '2310002', 'jabatan' => 'Ketua'],
+                    ['nama' => 'Yohanes K.', 'nim' => '2310003', 'jabatan' => 'Sekretaris'],
+                    ['nama' => 'Ruth W.', 'nim' => '2310004', 'jabatan' => 'Anggota'],
+                    ['nama' => 'Titus L.', 'nim' => '2310005', 'jabatan' => 'Anggota'],
+                    ['nama' => 'Esther P.', 'nim' => '2310006', 'jabatan' => 'Anggota'],
+                ],
+            ],
+            [
+                'kode' => 'UKM-OR',
+                'name' => 'UKM Olahraga',
+                'pembina' => 'Bpk. Yosua',
+                'ketua' => 'Andreas M.',
+                'divisi_id' => $divisiIds['BAAK'],
+                'anggota' => [
+                    ['nama' => 'Andreas M.', 'nim' => '2310007', 'jabatan' => 'Ketua'],
+                    ['nama' => 'Timotius R.', 'nim' => '2310008', 'jabatan' => 'Wakil Ketua'],
+                    ['nama' => 'Debora S.', 'nim' => '2310009', 'jabatan' => 'Anggota'],
+                    ['nama' => 'Stefanus B.', 'nim' => '2310010', 'jabatan' => 'Anggota'],
+                    ['nama' => 'Lidya N.', 'nim' => '2310011', 'jabatan' => 'Anggota'],
+                ],
+            ],
+            [
+                'kode' => 'UKM-MU',
+                'name' => 'UKM Musik & Multimedia',
+                'pembina' => 'Bpk. Petrus',
+                'ketua' => 'Gabriel T.',
+                'divisi_id' => $divisiIds['BAAK'],
+                'anggota' => [
+                    ['nama' => 'Gabriel T.', 'nim' => '2310012', 'jabatan' => 'Ketua'],
+                    ['nama' => 'Salomo H.', 'nim' => '2310013', 'jabatan' => 'Anggota'],
+                    ['nama' => 'Rafael W.', 'nim' => '2310014', 'jabatan' => 'Anggota'],
+                    ['nama' => 'Dorcas P.', 'nim' => '2310015', 'jabatan' => 'Anggota'],
+                ],
+            ],
+            [
+                'kode' => 'UKM-ROH',
+                'name' => 'UKM Kerohanian',
+                'pembina' => 'Bpk. Yakobus',
+                'ketua' => 'Nathanael K.',
+                'divisi_id' => $divisiIds['BAAK'],
+                'anggota' => [
+                    ['nama' => 'Nathanael K.', 'nim' => '2310016', 'jabatan' => 'Ketua'],
+                    ['nama' => 'Hana S.', 'nim' => '2310017', 'jabatan' => 'Sekretaris'],
+                    ['nama' => 'Eben E.', 'nim' => '2310018', 'jabatan' => 'Anggota'],
+                    ['nama' => 'Miryam P.', 'nim' => '2310019', 'jabatan' => 'Anggota'],
+                    ['nama' => 'Zakheus T.', 'nim' => '2310020', 'jabatan' => 'Anggota'],
+                ],
+            ],
+        ];
+
+        foreach ($ukmData as $data) {
+            $anggotaList = $data['anggota'];
+            unset($data['anggota']);
+            $ukm = Ukm::firstOrCreate(['kode' => $data['kode']], $data);
+
+            foreach ($anggotaList as $anggota) {
+                UkmAnggota::firstOrCreate(
+                    ['ukm_id' => $ukm->id, 'nama' => $anggota['nama']],
+                    $anggota
+                );
+            }
+        }
     }
 }

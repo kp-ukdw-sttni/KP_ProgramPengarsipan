@@ -11,7 +11,7 @@ import UploadDropzone from './UploadDropzone.vue'
 import { useRoute } from '../Composables/useRoute'
 import { useUploadFeedback } from '../Composables/useUploadFeedback'
 
-defineProps({
+const props = defineProps({
     show: {
         type: Boolean,
         default: false,
@@ -27,18 +27,10 @@ const divisiTree = ref([])
 const kategoriTree = ref([])
 const studyPrograms = ref([])
 const tahunList = ref([])
-const flatKategori = ref([])
 const loading = ref(false)
 const loadError = ref('')
 
 const maxYear = new Date().getFullYear()
-
-const flattenKategori = (list, depth = 0) => {
-    for (const k of list) {
-        flatKategori.value.push({ id: k.id, name: k.name, kode: k.kode, depth })
-        if (k.children?.length) flattenKategori(k.children, depth + 1)
-    }
-}
 
 const form = useForm({
     files: [],
@@ -102,7 +94,6 @@ watch(
         divisiTree.value = []
         kategoriTree.value = []
         tahunList.value = []
-        flatKategori.value = []
         loading.value = true
 
         try {
@@ -111,7 +102,6 @@ watch(
             kategoriTree.value = data.kategoriTree ?? []
             studyPrograms.value = data.studyPrograms ?? []
             tahunList.value = data.tahunList ?? []
-            flattenKategori(data.kategoriTree ?? [])
         } catch (e) {
             loadError.value = 'Gagal memuat data form. Silakan coba lagi.'
         } finally {
@@ -255,8 +245,11 @@ watch(
                                 <label class="mb-1 block text-[11px] font-semibold text-gray-500">Kategori</label>
                                 <Select v-model="form.kategori_id">
                                     <option value="">-- Pilih Kategori --</option>
-                                    <template v-for="k in flatKategori" :key="k.id">
-                                        <option :value="k.id">{{ k.depth ? '&nbsp;&nbsp;&mdash; ' : '' }}{{ k.name }}</option>
+                                    <template v-for="parent in kategoriTree" :key="parent.id">
+                                        <optgroup v-if="parent.children?.length" :label="parent.name">
+                                            <option v-for="c in parent.children" :key="c.id" :value="c.id">{{ c.name }}</option>
+                                        </optgroup>
+                                        <option v-else :value="parent.id">{{ parent.name }}</option>
                                     </template>
                                 </Select>
                                 <InputError :message="form.errors.kategori_id" />
@@ -266,10 +259,12 @@ watch(
                                 <label class="mb-1 block text-[11px] font-semibold text-gray-500">Divisi</label>
                                 <Select v-model="form.divisi_id">
                                     <option value="">-- Pilih Divisi --</option>
-                                    <optgroup v-for="f in divisiTree" :key="f.id" :label="f.name">
-                                        <option v-if="!f.children?.length" :value="f.id">{{ f.name }}</option>
-                                        <option v-for="c in f.children" :key="c.id" :value="c.id">{{ c.name }}</option>
-                                    </optgroup>
+                                    <template v-for="f in divisiTree" :key="f.id">
+                                        <optgroup v-if="f.children?.length" :label="f.name">
+                                            <option v-for="c in f.children" :key="c.id" :value="c.id">{{ c.name }}</option>
+                                        </optgroup>
+                                        <option v-else :value="f.id">{{ f.name }}</option>
+                                    </template>
                                 </Select>
                                 <InputError :message="form.errors.divisi_id" />
                             </div>

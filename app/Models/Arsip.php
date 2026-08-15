@@ -29,14 +29,17 @@ class Arsip extends Model
         'pengirim',
         'penerima',
         'file_path',
+        'file_path_excel',
         'lokasi_fisik',
         'file_size',
         'file_mime',
         'retention_date',
         'status',
+        'verification_status',
         'tags',
         'status_publikasi',
         'uploader_id',
+        'presensi_ukm_id',
     ];
 
     protected $casts = [
@@ -131,5 +134,13 @@ class Arsip extends Model
     public function versions(): HasMany
     {
         return $this->hasMany(ArsipVersion::class, 'arsip_id');
+    }
+
+    /**
+     * Get the attendance session that generated this archive.
+     */
+    public function presensiUkm(): BelongsTo
+    {
+        return $this->belongsTo(PresensiUkm::class, 'presensi_ukm_id');
     }
 }

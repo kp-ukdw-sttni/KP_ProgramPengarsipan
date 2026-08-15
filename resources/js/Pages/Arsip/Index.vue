@@ -178,7 +178,7 @@ const performDelete = () => {
         <ArsipFilterBar
             class="mt-5"
             :filters="filters"
-            :kategori="kategori"
+            :kategori-tree="kategoriTree"
             :divisi-tree="divisiTree"
             :study-programs="studyPrograms"
             :tahun-list="tahunList"
