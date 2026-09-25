@@ -294,7 +294,6 @@ const submit = () => {
                                     Status Publikasi
                                 </label>
                                 <Select v-model="form.status_publikasi">
-                                    <option value="Public">Public</option>
                                     <option value="Internal">Internal</option>
                                     <option value="Confidential">Confidential</option>
                                 </Select>

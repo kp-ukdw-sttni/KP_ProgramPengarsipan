@@ -46,10 +46,6 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
-    activePeminjaman: {
-        type: Object,
-        default: () => ({}),
-    },
 })
 
 const { user, hasRole, canManageArsip, canViewFile } = useAuth()
@@ -64,7 +60,7 @@ const previewArsip = ref(null)
 const deleteArsip = ref(null)
 const deleting = ref(false)
 
-const canRequest = computed(() => hasRole('Karyawan', 'Mahasiswa', 'Dosen'))
+const canRequest = computed(() => false) // Fitur peminjaman dinonaktifkan
 
 const isPdf = (arsip) => (arsip.file_path ?? '').toLowerCase().endsWith('.pdf')
 
@@ -81,7 +77,6 @@ const formatDate = (value) => {
 
 const publikasiBadge = (arsip) => {
     const map = {
-        Public: { label: 'Public', color: 'green' },
         Internal: { label: 'Internal', color: 'blue' },
         Confidential: { label: 'Confidential', color: 'red' },
     }
@@ -98,8 +93,6 @@ const statusBadge = (arsip) => {
     return map[arsip.status] ?? { label: arsip.status, color: 'gray' }
 }
 
-const myRequest = (arsip) => props.activePeminjaman[arsip.id] ?? null
-
 const viewArsip = (arsip) => {
     if (!canViewFile(arsip)) return
     if (isPdf(arsip)) {
@@ -112,12 +105,6 @@ const viewArsip = (arsip) => {
 const downloadArsip = (arsip) => {
     if (!canViewFile(arsip)) return
     window.location.href = routeFn('arsip.download', arsip.id)
-}
-
-const requestAccess = (arsip) => {
-    router.post(routeFn('peminjaman.request', arsip.id), {}, {
-        preserveScroll: true,
-    })
 }
 
 const confirmDelete = (arsip) => {
@@ -271,24 +258,6 @@ const performDelete = () => {
                                     >
                                         Unduh
                                     </button>
-
-                                    <button
-                                        v-if="canRequest && !canViewFile(item) && !myRequest(item)"
-                                        type="button"
-                                        class="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-amber-700 transition hover:bg-amber-50"
-                                        @click="requestAccess(item)"
-                                    >
-                                        Minta Akses
-                                    </button>
-                                    <span
-                                        v-else-if="canRequest && myRequest(item)"
-                                        class="rounded-lg px-2.5 py-1.5 text-xs font-bold"
-                                        :class="myRequest(item).status_approval === 'Approved'
-                                            ? 'text-green-600'
-                                            : 'text-amber-600'"
-                                    >
-                                        {{ myRequest(item).status_approval }}
-                                    </span>
 
                                     <Link
                                         v-if="canManageArsip(item)"

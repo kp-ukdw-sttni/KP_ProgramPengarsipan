@@ -38,6 +38,7 @@ const submit = () => form.put(routeFn('ukm.update', { ukm: props.ukm.id }))
 const addForm = useForm({
     nama: '',
     nim: '',
+    prodi: '',
     jabatan: '',
     status_keanggotaan: 'Aktif',
 })
@@ -54,6 +55,7 @@ const getRow = (a) => {
         anggotaEdits[a.id] = reactive({
             nama: a.nama,
             nim: a.nim ?? '',
+            prodi: a.prodi ?? '',
             jabatan: a.jabatan ?? '',
             status_keanggotaan: a.status_keanggotaan,
         })
@@ -65,6 +67,7 @@ const saveAnggota = (a) => {
     router.put(routeFn('ukm.anggota.update', { ukm: props.ukm.id, anggota: a.id }), {
         nama: anggotaEdits[a.id].nama,
         nim: anggotaEdits[a.id].nim,
+        prodi: anggotaEdits[a.id].prodi,
         jabatan: anggotaEdits[a.id].jabatan,
         status_keanggotaan: anggotaEdits[a.id].status_keanggotaan,
     })
@@ -98,12 +101,7 @@ const destroyAnggota = (a) => {
         <!-- Form UKM -->
         <div class="mt-6 max-w-3xl rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
             <div class="grid gap-4 sm:grid-cols-2">
-                <div>
-                    <label class="mb-1.5 block text-sm font-semibold text-gray-700">Kode UKM</label>
-                    <Input v-model="form.kode" />
-                    <InputError :message="form.errors.kode" class="mt-1" />
-                </div>
-                <div>
+                <div class="sm:col-span-2">
                     <label class="mb-1.5 block text-sm font-semibold text-gray-700">Nama UKM <span class="text-red-500">*</span></label>
                     <Input v-model="form.name" />
                     <InputError :message="form.errors.name" class="mt-1" />
@@ -117,59 +115,54 @@ const destroyAnggota = (a) => {
                     <Input v-model="form.ketua" />
                 </div>
                 <div>
-                    <label class="mb-1.5 block text-sm font-semibold text-gray-700">Unit / Divisi</label>
-                    <Select v-model="form.divisi_id">
-                        <option value="">-- Pilih divisi --</option>
-                        <option v-for="d in divisi" :key="d.id" :value="d.id">{{ d.name }}</option>
-                    </Select>
-                    <InputError :message="form.errors.divisi_id" class="mt-1" />
-                </div>
-                <div>
-                    <label class="mb-1.5 block text-sm font-semibold text-gray-700">Status</label>
+                    <label class="mb-1.5 block text-sm font-semibold text-gray-700">Status UKM</label>
                     <Select v-model="form.status">
                         <option value="Aktif">Aktif</option>
                         <option value="Nonaktif">Nonaktif</option>
                     </Select>
-                    <InputError :message="form.errors.status" class="mt-1" />
                 </div>
                 <div class="sm:col-span-2">
-                    <label class="mb-1.5 block text-sm font-semibold text-gray-700">Deskripsi</label>
+                    <label class="mb-1.5 block text-sm font-semibold text-gray-700">Deskripsi Kegiatan</label>
                     <textarea
                         v-model="form.deskripsi"
                         rows="3"
-                        class="block w-full rounded-lg border-gray-300 bg-white text-sm text-gray-900 placeholder-gray-400 shadow-sm transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 focus:outline-none"
-                    />
-                    <InputError :message="form.errors.deskripsi" class="mt-1" />
+                        class="w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                    ></textarea>
                 </div>
             </div>
-            <div class="mt-6 flex justify-end">
-                <PrimaryButton type="button" :disabled="form.processing" @click="submit">
-                    {{ form.processing ? 'Menyimpan...' : 'Simpan Perubahan' }}
+            <div class="mt-5 flex justify-end">
+                <PrimaryButton :disabled="form.processing" @click="submit">
+                    {{ form.processing ? 'Menyimpan...' : 'Simpan Perubahan UKM' }}
                 </PrimaryButton>
             </div>
         </div>
 
-        <!-- Kelola anggota -->
+        <!-- Kelola Anggota -->
         <div class="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
             <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-5 py-4">
-                <h3 class="text-base font-bold text-gray-800">Daftar Anggota ({{ ukm.anggota.length }})</h3>
+                <h3 class="text-base font-bold text-gray-800">Daftar Anggota UKM ({{ ukm.anggota.length }})</h3>
             </div>
 
-            <!-- Add form -->
-            <div class="grid gap-3 border-b border-gray-100 bg-gray-50 px-5 py-4 sm:grid-cols-2 lg:grid-cols-5">
+            <!-- Form Input Anggota Baru -->
+            <div class="grid gap-3 border-b border-gray-100 bg-gray-50 px-5 py-4 sm:grid-cols-2 lg:grid-cols-6">
                 <div>
-                    <label class="mb-1 block text-xs font-semibold text-gray-600">Nama <span class="text-red-500">*</span></label>
-                    <Input v-model="addForm.nama" placeholder="Nama anggota" />
+                    <label class="mb-1 block text-xs font-semibold text-gray-600">Nama Mahasiswa <span class="text-red-500">*</span></label>
+                    <Input v-model="addForm.nama" placeholder="Nama Mahasiswa" />
                     <InputError :message="addForm.errors.nama" class="mt-1" />
                 </div>
                 <div>
                     <label class="mb-1 block text-xs font-semibold text-gray-600">NIM</label>
-                    <Input v-model="addForm.nim" placeholder="NIM" />
+                    <Input v-model="addForm.nim" placeholder="NIM Mahasiswa" />
                     <InputError :message="addForm.errors.nim" class="mt-1" />
                 </div>
                 <div>
+                    <label class="mb-1 block text-xs font-semibold text-gray-600">Program Studi (Prodi)</label>
+                    <Input v-model="addForm.prodi" placeholder="S1 Teologi / S1 PAK" />
+                    <InputError :message="addForm.errors.prodi" class="mt-1" />
+                </div>
+                <div>
                     <label class="mb-1 block text-xs font-semibold text-gray-600">Jabatan</label>
-                    <Input v-model="addForm.jabatan" placeholder="Ketua / Anggota / dll" />
+                    <Input v-model="addForm.jabatan" placeholder="Ketua / Sekretaris / Anggota" />
                     <InputError :message="addForm.errors.jabatan" class="mt-1" />
                 </div>
                 <div>
@@ -182,25 +175,26 @@ const destroyAnggota = (a) => {
                 <div class="flex items-end">
                     <button
                         type="button"
-                        class="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+                        class="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-blue-700 disabled:opacity-50"
                         :disabled="addForm.processing"
                         @click="submitAdd"
                     >
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                         </svg>
-                        Tambah
+                        Tambah Anggota
                     </button>
                 </div>
             </div>
 
-            <!-- List -->
+            <!-- List Anggota -->
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm">
                     <thead class="bg-navy text-xs uppercase tracking-wide text-gray-300">
                         <tr>
-                            <th class="px-4 py-3 font-semibold">Nama</th>
+                            <th class="px-4 py-3 font-semibold">Nama Mahasiswa</th>
                             <th class="px-4 py-3 font-semibold">NIM</th>
+                            <th class="px-4 py-3 font-semibold">Program Studi</th>
                             <th class="px-4 py-3 font-semibold">Jabatan</th>
                             <th class="px-4 py-3 font-semibold">Status</th>
                             <th class="px-4 py-3 text-center font-semibold">Aksi</th>
@@ -218,6 +212,12 @@ const destroyAnggota = (a) => {
                                 <input
                                     v-model="getRow(a).nim"
                                     class="w-full min-w-[100px] rounded-lg border-gray-300 bg-white px-3 py-1.5 font-mono text-xs shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 focus:outline-none"
+                                />
+                            </td>
+                            <td class="px-4 py-2.5">
+                                <input
+                                    v-model="getRow(a).prodi"
+                                    class="w-full min-w-[120px] rounded-lg border-gray-300 bg-white px-3 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 focus:outline-none"
                                 />
                             </td>
                             <td class="px-4 py-2.5">
@@ -252,8 +252,8 @@ const destroyAnggota = (a) => {
                             </td>
                         </tr>
                         <tr v-if="!ukm.anggota.length">
-                            <td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500">
-                                Belum ada anggota. Tambahkan di atas.
+                            <td colspan="6" class="px-4 py-8 text-center text-sm text-gray-500">
+                                Belum ada anggota. Tambahkan data anggota pada form di atas.
                             </td>
                         </tr>
                     </tbody>

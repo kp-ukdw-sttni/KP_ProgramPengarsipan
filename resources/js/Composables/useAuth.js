@@ -19,35 +19,22 @@ export function useAuth() {
     }
 
     const isStaffArsip = () =>
-        hasRole('Superadmin', 'Operator', 'Staf TU')
+        hasRole('Admin', 'Superadmin')
 
     const canManageArsip = (arsip) => {
         if (!user.value) return false
-        if (hasRole('Superadmin')) return true
-        if (hasRole('Operator', 'Staf TU')) {
-            return arsip.divisi_id === user.value.divisi_id
-        }
+        if (hasRole('Admin', 'Superadmin')) return true
+        if (arsip.uploader_id === user.value.id) return true
         return false
     }
 
-    const canSign = () => hasRole('Superadmin', 'Kaprodi', 'Dekan', 'Staf TU')
+    const canSign = () => hasRole('Admin', 'Superadmin', 'Dosen')
 
     const canViewFile = (arsip) => {
         if (!user.value) return false
-        if (hasRole('Superadmin')) return true
-        if (arsip.status_publikasi === 'Public') return true
-
-        const staffSameDivisi =
-            hasRole('Operator', 'Staf TU') && arsip.divisi_id === user.value.divisi_id
-
-        if (arsip.status_publikasi === 'Internal') {
-            return staffSameDivisi || hasRole('Dosen', 'Kaprodi', 'Dekan')
-        }
-
-        if (arsip.status_publikasi === 'Confidential') {
-            return staffSameDivisi || hasRole('Kaprodi', 'Dekan')
-        }
-
+        if (hasRole('Admin', 'Superadmin')) return true
+        if (['Internal'].includes(arsip.status_publikasi)) return true
+        if (arsip.uploader_id === user.value.id) return true
         return false
     }
 

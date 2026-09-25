@@ -51,13 +51,15 @@ class UkmService
      */
     public function store(Request $request): Ukm
     {
+        $kmsDivisiId = Divisi::where('kode', 'KMS')->value('id');
+
         return Ukm::create([
             'kode' => $request->kode ?: $this->generateKode($request->name),
             'name' => $request->name,
             'deskripsi' => $request->deskripsi,
             'pembina' => $request->pembina,
             'ketua' => $request->ketua,
-            'divisi_id' => $request->divisi_id ?: null,
+            'divisi_id' => $request->divisi_id ?: $kmsDivisiId,
             'status' => $request->status,
         ]);
     }
@@ -94,6 +96,7 @@ class UkmService
         return $ukm->anggota()->create([
             'nama' => $request->nama,
             'nim' => $request->nim,
+            'prodi' => $request->prodi,
             'jabatan' => $request->jabatan,
             'status_keanggotaan' => $request->status_keanggotaan ?? 'Aktif',
         ]);
@@ -107,6 +110,7 @@ class UkmService
         $anggota->update([
             'nama' => $request->nama,
             'nim' => $request->nim,
+            'prodi' => $request->prodi,
             'jabatan' => $request->jabatan,
             'status_keanggotaan' => $request->status_keanggotaan ?? $anggota->status_keanggotaan,
         ]);

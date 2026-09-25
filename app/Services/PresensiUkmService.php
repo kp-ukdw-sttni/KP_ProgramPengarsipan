@@ -26,11 +26,15 @@ class PresensiUkmService
     /**
      * List presensi sessions with their status.
      */
-    public function getIndexData(User $user): array
+    public function getIndexData(User $user, ?Request $request = null): array
     {
         $query = PresensiUkm::with(['ukm', 'pengisi', 'arsip'])
             ->withCount('details')
             ->latest();
+
+        if ($request && $request->filled('ukm_id')) {
+            $query->where('ukm_id', $request->ukm_id);
+        }
 
         if ($user->hasRole('Sie Kesiswaan')) {
             $query->where('pengisi_id', $user->id);
@@ -38,6 +42,8 @@ class PresensiUkmService
 
         return [
             'presensi' => $query->paginate(10)->withQueryString(),
+            'ukmList' => Ukm::orderBy('name')->get(['id', 'name']),
+            'selectedUkmId' => $request?->ukm_id ?? '',
         ];
     }
 
@@ -86,7 +92,7 @@ class PresensiUkmService
             'tanggal_kegiatan' => $tanggal,
             'pertemuan_ke' => $request->pertemuan_ke,
             'pengisi_id' => $user->id,
-            'status_arsip' => 'Menunggu Verifikasi',
+            'status_arsip' => 'Terverifikasi',
             'catatan_pengisi' => $request->catatan_pengisi,
         ]);
 
@@ -137,7 +143,7 @@ class PresensiUkmService
             'file_mime' => 'application/pdf',
             'retention_date' => now()->addYears(5)->toDateString(),
             'status' => 'Aktif',
-            'verification_status' => 'Menunggu Verifikasi',
+            'verification_status' => 'Terverifikasi',
             'status_publikasi' => 'Internal',
             'tags' => 'presensi, ukm, rekap, pertemuan-'.$presensi->pertemuan_ke,
             'uploader_id' => $user->id,
@@ -263,7 +269,8 @@ class PresensiUkmService
      */
     public function canAccess(PresensiUkm $presensi, User $user): bool
     {
-        return $user->hasRole('Superadmin')
+        return $user->hasRole('Admin')
+            || $user->hasRole('Superadmin')
             || $user->hasRole('Sie Kesiswaan')
             || $presensi->pengisi_id === $user->id;
     }

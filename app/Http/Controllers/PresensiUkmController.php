@@ -17,9 +17,9 @@ class PresensiUkmController extends Controller
     /**
      * List presensi sessions.
      */
-    public function index()
+    public function index(Request $request)
     {
-        return Inertia::render('Presensi/Index', $this->presensiService->getIndexData(Auth::user()));
+        return Inertia::render('Presensi/Index', $this->presensiService->getIndexData(Auth::user(), $request));
     }
 
     /**
@@ -76,7 +76,7 @@ class PresensiUkmController extends Controller
      */
     public function review()
     {
-        abort_unless(Auth::user()->hasRole('Superadmin'), 403, 'Hanya Admin Pengarsipan (Superadmin) yang diizinkan.');
+        abort_unless(Auth::user()->hasRole('Admin') || Auth::user()->hasRole('Superadmin'), 403, 'Hanya Admin Pengarsipan yang diizinkan.');
 
         return Inertia::render('Presensi/Review', $this->presensiService->getReviewData());
     }
@@ -86,7 +86,7 @@ class PresensiUkmController extends Controller
      */
     public function approve(Request $request, PresensiUkm $presensi)
     {
-        abort_unless(Auth::user()->hasRole('Superadmin'), 403, 'Hanya Admin Pengarsipan (Superadmin) yang diizinkan.');
+        abort_unless(Auth::user()->hasRole('Admin') || Auth::user()->hasRole('Superadmin'), 403, 'Hanya Admin Pengarsipan yang diizinkan.');
 
         $request->validate([
             'catatan_reviewer' => ['nullable', 'string', 'max:255'],
@@ -102,7 +102,7 @@ class PresensiUkmController extends Controller
      */
     public function reject(Request $request, PresensiUkm $presensi)
     {
-        abort_unless(Auth::user()->hasRole('Superadmin'), 403, 'Hanya Admin Pengarsipan (Superadmin) yang diizinkan.');
+        abort_unless(Auth::user()->hasRole('Admin') || Auth::user()->hasRole('Superadmin'), 403, 'Hanya Admin Pengarsipan yang diizinkan.');
 
         $request->validate([
             'catatan_reviewer' => ['required', 'string', 'max:255'],

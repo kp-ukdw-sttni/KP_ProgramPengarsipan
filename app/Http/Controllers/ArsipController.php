@@ -47,39 +47,9 @@ class ArsipController extends Controller
     /**
      * Store multiple uploaded files as archive records in secure storage.
      */
-    public function store(Request $request)
+    public function store(\App\Http\Requests\StoreArsipRequest $request)
     {
         $user = Auth::user();
-
-        $request->validate([
-            'files' => ['required', 'array', 'min:1', 'max:10'],
-            'files.*' => ['file', 'mimes:pdf,docx,jpg,jpeg,png', 'max:10240'], // Max 10MB per file
-            'judul' => ['required', 'array', 'min:1', 'max:10'],
-            'judul.*' => ['required', 'string', 'max:255'],
-            'nomor_arsip' => ['nullable', 'array'],
-            'nomor_arsip.*' => ['nullable', 'string', 'max:100', 'unique:arsip,nomor_arsip'],
-            'nomor_surat' => ['nullable', 'string', 'max:255'],
-            'deskripsi' => ['nullable', 'string'],
-            'kategori_id' => ['required', 'exists:kategori_arsip,id'],
-            'divisi_id' => ['required', 'exists:divisi,id'],
-            'study_program_id' => ['nullable', 'exists:study_programs,id'],
-            'tahun' => ['nullable', 'integer', 'min:1990', 'max:'.now()->year],
-            'tanggal_dokumen' => ['nullable', 'date'],
-            'tanggal_diterima' => ['nullable', 'date'],
-            'pengirim' => ['nullable', 'string', 'max:255'],
-            'penerima' => ['nullable', 'string', 'max:255'],
-            'lokasi_fisik' => ['nullable', 'string', 'max:255'],
-            'retention_date' => ['required', 'date', 'after:today'],
-            'status_publikasi' => ['required', 'in:Public,Internal,Confidential'],
-            'tags' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        // Operator / Staf TU restriction
-        if (($user->hasRole('Operator') || $user->hasRole('Staf TU')) && $request->divisi_id != $user->divisi_id) {
-            return back()->withErrors([
-                'divisi_id' => 'Anda hanya dapat mengarsipkan dokumen di unit kerja Anda sendiri.',
-            ]);
-        }
 
         $createdCount = $this->arsipService->storeFiles($request, $user);
 
@@ -129,7 +99,7 @@ class ArsipController extends Controller
             'file' => ['nullable', 'file', 'mimes:pdf,docx,jpg,jpeg,png', 'max:10240'],
             'retention_date' => ['required', 'date'],
             'status' => ['required', 'in:Aktif,Inaktif,Diarsipkan,Dimusnahkan'],
-            'status_publikasi' => ['required', 'in:Public,Internal,Confidential'],
+            'status_publikasi' => ['required', 'in:Internal,Confidential'],
             'tags' => ['nullable', 'string', 'max:255'],
             'change_note' => ['nullable', 'string', 'max:255'],
         ]);

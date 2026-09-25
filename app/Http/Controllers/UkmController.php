@@ -94,6 +94,7 @@ class UkmController extends Controller
         $request->validate([
             'nama' => ['required', 'string', 'max:255'],
             'nim' => ['nullable', 'string', 'max:50'],
+            'prodi' => ['nullable', 'string', 'max:255'],
             'jabatan' => ['nullable', 'string', 'max:255'],
             'status_keanggotaan' => ['nullable', 'in:Aktif,Keluar'],
         ]);
@@ -111,6 +112,7 @@ class UkmController extends Controller
         $request->validate([
             'nama' => ['required', 'string', 'max:255'],
             'nim' => ['nullable', 'string', 'max:50'],
+            'prodi' => ['nullable', 'string', 'max:255'],
             'jabatan' => ['nullable', 'string', 'max:255'],
             'status_keanggotaan' => ['nullable', 'in:Aktif,Keluar'],
         ]);

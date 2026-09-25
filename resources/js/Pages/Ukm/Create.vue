@@ -52,12 +52,7 @@ const submit = () => form.post(routeFn('ukm.store'))
 
         <div class="mt-6 max-w-3xl rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
             <div class="grid gap-4 sm:grid-cols-2">
-                <div>
-                    <label class="mb-1.5 block text-sm font-semibold text-gray-700">Kode UKM</label>
-                    <Input v-model="form.kode" placeholder="Kosongkan untuk otomatis" />
-                    <InputError :message="form.errors.kode" class="mt-1" />
-                </div>
-                <div>
+                <div class="sm:col-span-2">
                     <label class="mb-1.5 block text-sm font-semibold text-gray-700">Nama UKM <span class="text-red-500">*</span></label>
                     <Input v-model="form.name" placeholder="Contoh: UKM Paduan Suara" />
                     <InputError :message="form.errors.name" class="mt-1" />
@@ -69,14 +64,6 @@ const submit = () => form.post(routeFn('ukm.store'))
                 <div>
                     <label class="mb-1.5 block text-sm font-semibold text-gray-700">Ketua UKM</label>
                     <Input v-model="form.ketua" placeholder="Nama ketua UKM" />
-                </div>
-                <div>
-                    <label class="mb-1.5 block text-sm font-semibold text-gray-700">Unit / Divisi</label>
-                    <Select v-model="form.divisi_id">
-                        <option value="">-- Pilih divisi --</option>
-                        <option v-for="d in divisi" :key="d.id" :value="d.id">{{ d.name }}</option>
-                    </Select>
-                    <InputError :message="form.errors.divisi_id" class="mt-1" />
                 </div>
                 <div>
                     <label class="mb-1.5 block text-sm font-semibold text-gray-700">Status</label>

@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('ukm_id')->constrained('ukm')->onDelete('cascade');
             $table->string('nama');
             $table->string('nim')->nullable();
+            $table->string('prodi')->nullable();
             $table->string('jabatan')->nullable();
             $table->enum('status_keanggotaan', ['Aktif', 'Keluar'])->default('Aktif');
             $table->timestamps();

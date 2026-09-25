@@ -17,6 +17,7 @@ class UkmAnggota extends Model
         'ukm_id',
         'nama',
         'nim',
+        'prodi',
         'jabatan',
         'status_keanggotaan',
     ];

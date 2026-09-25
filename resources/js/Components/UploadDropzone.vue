@@ -14,8 +14,8 @@ const inputRef = ref(null)
 const dragging = ref(false)
 
 const maxFiles = 10
-const maxSizeMB = 10
-const accepted = 'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png'
+const maxSizeMB = 25
+const accepted = '.pdf,.docx,.xlsx,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation'
 
 const formatSize = (bytes) => {
     if (!bytes) return '-'
@@ -75,7 +75,7 @@ const pickFile = () => inputRef.value?.click()
                 Tarik &amp; letakkan berkas di sini, atau klik untuk memilih
             </p>
             <p class="mt-1 text-xs text-gray-500">
-                PDF, DOCX, JPG, PNG &mdash; maks. {{ maxFiles }} berkas, {{ maxSizeMB }}MB per berkas
+                PDF, DOCX, XLSX, PPTX &mdash; maks. {{ maxFiles }} berkas, {{ maxSizeMB }}MB per berkas
             </p>
             <input
                 ref="inputRef"

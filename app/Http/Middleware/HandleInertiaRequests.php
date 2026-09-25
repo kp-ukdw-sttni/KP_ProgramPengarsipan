@@ -46,6 +46,11 @@ class HandleInertiaRequests extends Middleware
                     'permissions' => $user->getAllPermissions()->pluck('name'),
                 ] : null,
             ],
+            'notifications' => [
+                'pendingPeminjamanCount' => fn () => $user && ($user->hasRole('Superadmin') || $user->hasRole('Admin') || $user->hasRole('Operator'))
+                    ? \App\Models\Peminjaman::where('status_approval', 'Pending')->count()
+                    : 0,
+            ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),

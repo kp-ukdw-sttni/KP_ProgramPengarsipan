@@ -172,7 +172,6 @@ onMounted(() => {
                 <label class="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-gray-500">Publikasi</label>
                 <Select v-model="statusPublikasi">
                     <option value="">Semua Publikasi</option>
-                    <option value="Public">Public</option>
                     <option value="Internal">Internal</option>
                     <option value="Confidential">Confidential</option>
                 </Select>

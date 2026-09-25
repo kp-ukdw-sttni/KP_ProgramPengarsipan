@@ -12,22 +12,25 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    ukmList: {
+        type: Array,
+        default: () => [],
+    },
+    selectedUkmId: {
+        type: [String, Number],
+        default: '',
+    },
 })
 
 const routeFn = useRoute()
 const { hasRole } = useAuth()
 
-const isSuperadmin = hasRole('Superadmin')
-
-const statusStyle = (status) => {
-    switch (status) {
-        case 'Terverifikasi':
-            return 'bg-green-100 text-green-700 ring-green-600/20'
-        case 'Ditolak':
-            return 'bg-red-100 text-red-700 ring-red-600/20'
-        default:
-            return 'bg-amber-100 text-amber-700 ring-amber-600/20'
-    }
+const filterByUkm = (id) => {
+    router.get(
+        routeFn('presensi.index'),
+        { ukm_id: id || undefined },
+        { preserveState: true, replace: true }
+    )
 }
 
 const openPdf = (id) => window.open(routeFn('presensi.pdf', { presensi: id }), '_blank')
@@ -41,7 +44,7 @@ const openExcel = (id) => window.open(routeFn('presensi.excel', { presensi: id }
         <PageHero
             eyebrow="Presensi UKM"
             title="Daftar Presensi & Rekap"
-            subtitle="Kelola sesi presensi UKM, unduh rekap, dan pantau status verifikasi arsip."
+            subtitle="Kelola sesi presensi UKM dan unduh rekap kehadiran per kegiatan/UKM."
         >
             <template #actions>
                 <Link
@@ -56,6 +59,29 @@ const openExcel = (id) => window.open(routeFn('presensi.excel', { presensi: id }
             </template>
         </PageHero>
 
+        <!-- Filter Tab Berdasarkan UKM -->
+        <div class="mt-6 flex flex-wrap items-center gap-2 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
+            <span class="px-2 text-xs font-bold uppercase tracking-wider text-gray-400">Pilih UKM:</span>
+            <button
+                type="button"
+                class="rounded-xl px-4 py-2 text-xs font-bold transition"
+                :class="!selectedUkmId ? 'bg-navy text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                @click="filterByUkm('')"
+            >
+                Semua UKM
+            </button>
+            <button
+                v-for="u in ukmList"
+                :key="u.id"
+                type="button"
+                class="rounded-xl px-4 py-2 text-xs font-bold transition"
+                :class="String(selectedUkmId) === String(u.id) ? 'bg-navy text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                @click="filterByUkm(u.id)"
+            >
+                {{ u.name }}
+            </button>
+        </div>
+
         <div class="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm">
@@ -64,8 +90,7 @@ const openExcel = (id) => window.open(routeFn('presensi.excel', { presensi: id }
                             <th class="px-4 py-3 font-semibold">UKM / Kegiatan</th>
                             <th class="px-4 py-3 text-center font-semibold">Pertemuan</th>
                             <th class="px-4 py-3 font-semibold">Tanggal</th>
-                            <th class="px-4 py-3 text-center font-semibold">Anggota</th>
-                            <th class="px-4 py-3 text-center font-semibold">Status Arsip</th>
+                            <th class="px-4 py-3 text-center font-semibold">Hadir (Anggota)</th>
                             <th class="px-4 py-3 text-center font-semibold">Aksi</th>
                         </tr>
                     </thead>
@@ -76,17 +101,9 @@ const openExcel = (id) => window.open(routeFn('presensi.excel', { presensi: id }
                                 <p class="text-xs text-gray-500">{{ p.judul_kegiatan || '-' }}</p>
                                 <p class="mt-0.5 text-[11px] text-gray-400">oleh {{ p.pengisi?.name }}</p>
                             </td>
-                            <td class="px-4 py-3 text-center text-gray-600">{{ p.pertemuan_ke ?? '-' }}</td>
+                            <td class="px-4 py-3 text-center font-bold text-blue-600">Pertemuan {{ p.pertemuan_ke ?? '-' }}</td>
                             <td class="px-4 py-3 text-gray-600">{{ p.tanggal_kegiatan }}</td>
-                            <td class="px-4 py-3 text-center font-semibold text-gray-800">{{ p.details_count }}</td>
-                            <td class="px-4 py-3 text-center">
-                                <span
-                                    class="inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ring-1"
-                                    :class="statusStyle(p.status_arsip)"
-                                >
-                                    {{ p.status_arsip }}
-                                </span>
-                            </td>
+                            <td class="px-4 py-3 text-center font-semibold text-gray-800">{{ p.details_count }} Anggota</td>
                             <td class="px-4 py-3">
                                 <div class="flex items-center justify-center gap-1.5">
                                     <Link
@@ -115,7 +132,7 @@ const openExcel = (id) => window.open(routeFn('presensi.excel', { presensi: id }
                             </td>
                         </tr>
                         <tr v-if="!presensi.data.length">
-                            <td colspan="6" class="px-4 py-12 text-center text-sm text-gray-500">
+                            <td colspan="5" class="px-4 py-12 text-center text-sm text-gray-500">
                                 Belum ada presensi. Klik
                                 <Link :href="routeFn('presensi.create')" class="font-semibold text-indigo-600 hover:underline">
                                     Isi Presensi Baru

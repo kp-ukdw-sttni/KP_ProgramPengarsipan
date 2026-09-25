@@ -50,14 +50,15 @@ const today = computed(() =>
     }).format(new Date()),
 )
 
-const canUpload = computed(() => hasRole('Superadmin', 'Operator', 'Staf TU'))
-const canApprove = computed(() =>
-    hasRole('Superadmin', 'Operator', 'Staf TU', 'Kaprodi', 'Dekan'),
-)
-const canAdmin = computed(() => hasRole('Superadmin', 'Operator', 'Staf TU'))
-const canManageUsers = computed(() => hasRole('Superadmin'))
-const canPresensi = computed(() => hasRole('Sie Kesiswaan', 'Superadmin'))
-const canReviewPresensi = computed(() => hasRole('Superadmin'))
+const canUpload = computed(() => true)
+const canApprove = computed(() => hasRole('Admin', 'Superadmin'))
+const canAdmin = computed(() => hasRole('Admin', 'Superadmin'))
+const canManageUsers = computed(() => hasRole('Admin', 'Superadmin'))
+const canPresensi = computed(() => {
+    if (hasRole('Admin', 'Superadmin')) return true
+    return user.value?.divisi?.kode === 'KMS' || user.value?.divisi_id === 3
+})
+const canReviewPresensi = computed(() => hasRole('Admin', 'Superadmin'))
 
 const logout = () => {
     router.post(routeFn('logout'))

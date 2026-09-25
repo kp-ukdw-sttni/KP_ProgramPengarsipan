@@ -6,7 +6,6 @@ use App\Models\Arsip;
 use App\Models\ArsipVersion;
 use App\Models\Divisi;
 use App\Models\KategoriArsip;
-use App\Models\Peminjaman;
 use App\Models\StudyProgram;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -67,25 +66,14 @@ class ArsipService
 
         $arsip = $query->latest()->paginate(10)->withQueryString();
 
-        // Active borrow requests for requester roles (Mahasiswa/Dosen/Karyawan)
-        $requesterRoles = ['Karyawan', 'Mahasiswa', 'Dosen'];
-        $activePeminjaman = collect();
-        if (array_intersect($user->getRoleNames()->all(), $requesterRoles)) {
-            $activePeminjaman = Peminjaman::where('user_id', $user->id)
-                ->whereIn('status_approval', ['Pending', 'Approved'])
-                ->get()
-                ->keyBy('arsip_id');
-        }
-
         return [
-            'arsip' => $arsip,
-            'filters' => $request->only(['search', 'kategori_id', 'divisi_id', 'study_program_id', 'tahun', 'status_publikasi', 'status']),
-            'kategori' => KategoriArsip::orderBy('name')->get(),
-            'kategoriTree' => $this->kategoriTree(),
-            'divisiTree' => $this->divisiTree(),
+            'arsip'         => $arsip,
+            'filters'       => $request->only(['search', 'kategori_id', 'divisi_id', 'study_program_id', 'tahun', 'status_publikasi', 'status']),
+            'kategori'      => KategoriArsip::orderBy('name')->get(),
+            'kategoriTree'  => $this->kategoriTree(),
+            'divisiTree'    => $this->divisiTree(),
             'studyPrograms' => StudyProgram::orderBy('name')->get(),
-            'tahunList' => $this->tahunList(),
-            'activePeminjaman' => $activePeminjaman,
+            'tahunList'     => $this->tahunList(),
         ];
     }
 
@@ -107,8 +95,19 @@ class ArsipService
      */
     public function storeFiles(Request $request, User $user): int
     {
-        $tahun = $request->tahun ?: now()->year;
+        // Ambil tahun dari tanggal dokumen (YYYY)
+        $tahun = \Carbon\Carbon::parse($request->tanggal_dokumen)->year;
         $createdCount = 0;
+
+        $publikasiMap = [
+            'Internal' => 'Internal',
+            'Terbatas' => 'Internal',
+            'Rahasia' => 'Confidential',
+            'Confidential' => 'Confidential',
+        ];
+        $statusPublikasi = $publikasiMap[$request->status_publikasi] ?? 'Internal';
+
+        $nomorSurat = $request->boolean('tanpa_nomor_surat') ? 'Tanpa Nomor' : ($request->nomor_surat ?: 'Tanpa Nomor');
 
         foreach ($request->file('files') as $index => $file) {
             $judul = $request->judul[$index] ?? 'Dokumen tanpa judul';
@@ -122,16 +121,16 @@ class ArsipService
             // Automatic nomor_arsip when not provided
             $nomorArsip = $request->nomor_arsip[$index] ?? $this->generateNomorArsip($request->divisi_id, $tahun);
 
-            Arsip::create([
+            $arsip = Arsip::create([
                 'nomor_arsip' => $nomorArsip,
-                'nomor_surat' => $request->nomor_surat,
+                'nomor_surat' => $nomorSurat,
                 'judul' => $judul,
                 'deskripsi' => $request->deskripsi,
                 'kategori_id' => $request->kategori_id,
                 'divisi_id' => $request->divisi_id,
                 'study_program_id' => $request->study_program_id,
                 'tahun' => $tahun,
-                'tanggal_dokumen' => $request->tanggal_dokumen,
+                'tanggal_dokumen' => $request->tanggal_dokumen ?: now()->toDateString(),
                 'tanggal_diterima' => $request->tanggal_diterima ?: now()->toDateString(),
                 'pengirim' => $request->pengirim,
                 'penerima' => $request->penerima,
@@ -139,11 +138,20 @@ class ArsipService
                 'lokasi_fisik' => $request->lokasi_fisik,
                 'file_size' => $file->getSize(),
                 'file_mime' => $file->getMimeType(),
-                'retention_date' => $request->retention_date,
+                'retention_date' => $request->retention_date ?: now()->addYears(5)->toDateString(),
                 'status' => 'Aktif',
-                'status_publikasi' => $request->status_publikasi,
+                'status_publikasi' => $statusPublikasi,
                 'tags' => $request->tags,
                 'uploader_id' => $user->id,
+            ]);
+
+            // Otomatis Versi Dokumen Awal (v1.0)
+            ArsipVersion::create([
+                'arsip_id' => $arsip->id,
+                'version_number' => 1,
+                'file_path' => $filePath,
+                'uploaded_by' => $user->id,
+                'change_note' => 'v1.0 (Unggah Berkas Awal)',
             ]);
 
             $createdCount++;
@@ -327,35 +335,24 @@ class ArsipService
      */
     public function canAccessFile(Arsip $arsip, User $user): bool
     {
-        if ($user->hasRole('Superadmin')) {
+        if ($user->hasRole('Admin') || $user->hasRole('Superadmin')) {
             return true;
         }
 
-        if ($arsip->status_publikasi === 'Public') {
+        if ($arsip->status_publikasi === 'Internal') {
             return true;
         }
 
-        $staffSameDivisi = ($user->hasRole('Operator') || $user->hasRole('Staf TU'))
-            && $arsip->divisi_id == $user->divisi_id;
-
-        if ($arsip->status_publikasi === 'Internal'
-            && ($staffSameDivisi || $user->hasRole('Dosen') || $user->hasRole('Kaprodi') || $user->hasRole('Dekan'))) {
+        if ($arsip->uploader_id == $user->id) {
             return true;
         }
 
-        if ($arsip->status_publikasi === 'Confidential'
-            && ($staffSameDivisi || $user->hasRole('Kaprodi') || $user->hasRole('Dekan'))) {
-            return true;
-        }
-
-        $hasActivePeminjaman = Peminjaman::where('arsip_id', $arsip->id)
+        $hasActiveApproval = Peminjaman::where('arsip_id', $arsip->id)
             ->where('user_id', $user->id)
             ->where('status_approval', 'Approved')
-            ->where('borrowed_at', '<=', now())
-            ->where('expired_at', '>=', now())
             ->exists();
 
-        if ($hasActivePeminjaman) {
+        if ($hasActiveApproval) {
             return true;
         }
 
@@ -422,16 +419,20 @@ class ArsipService
     }
 
     /**
-     * Distinct list of years present in the archive records.
+     * List of years from current year down to 1970 + DB years.
      */
     private function tahunList(): array
     {
-        return Arsip::whereNotNull('tahun')
+        $currentYear = (int) date('Y');
+        $years = range($currentYear, 1970);
+
+        $dbYears = Arsip::whereNotNull('tahun')
             ->distinct()
-            ->orderByDesc('tahun')
             ->pluck('tahun')
             ->map(fn ($t) => (int) $t)
             ->all();
+
+        return collect($years)->merge($dbYears)->unique()->sortDesc()->values()->all();
     }
 
     /**

@@ -80,7 +80,7 @@ const openExcel = () => window.open(routeFn('presensi.excel', { presensi: props.
         </PageHero>
 
         <!-- Info rekap -->
-        <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
                 <p class="text-[11px] font-bold uppercase tracking-wide text-gray-400">Nomor Arsip</p>
                 <p class="mt-1 font-mono text-sm font-bold text-gray-900">{{ rekap.nomor_arsip || '-' }}</p>
@@ -92,15 +92,6 @@ const openExcel = () => window.open(routeFn('presensi.excel', { presensi: props.
             <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
                 <p class="text-[11px] font-bold uppercase tracking-wide text-gray-400">Diisi Oleh</p>
                 <p class="mt-1 text-sm font-semibold text-gray-900">{{ rekap.pengisi }}</p>
-            </div>
-            <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-                <p class="text-[11px] font-bold uppercase tracking-wide text-gray-400">Status Verifikasi</p>
-                <span
-                    class="mt-1 inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ring-1"
-                    :class="statusStyle(rekap.status_arsip)"
-                >
-                    {{ rekap.status_arsip }}
-                </span>
             </div>
         </div>
 

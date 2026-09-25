@@ -52,7 +52,6 @@ const destroy = (item) => {
                 <table class="w-full text-left text-sm">
                     <thead class="bg-navy text-xs uppercase tracking-wide text-gray-300">
                         <tr>
-                            <th class="px-4 py-3 font-semibold">Kode</th>
                             <th class="px-4 py-3 font-semibold">Nama UKM</th>
                             <th class="px-4 py-3 font-semibold">Pembina</th>
                             <th class="px-4 py-3 font-semibold">Ketua</th>
@@ -64,7 +63,6 @@ const destroy = (item) => {
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         <tr v-for="u in ukm.data" :key="u.id" class="transition hover:bg-gray-50">
-                            <td class="px-4 py-3 font-mono text-xs font-semibold text-indigo-600">{{ u.kode }}</td>
                             <td class="px-4 py-3">
                                 <p class="font-semibold text-gray-900">{{ u.name }}</p>
                                 <p v-if="u.divisi" class="text-[11px] text-gray-400">{{ u.divisi.name }}</p>
