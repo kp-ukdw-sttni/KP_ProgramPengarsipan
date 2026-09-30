@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Link, useForm } from '@inertiajs/vue3'
 import AuthenticatedLayout from '../../Layouts/AuthenticatedLayout.vue'
 import FlashMessages from '../../Components/ui/FlashMessages.vue'
@@ -76,16 +76,32 @@ const prevStep = () => {
     step.value = 1
 }
 
-const onUkmChange = () => {
-    anggotaRows.value = (selectedUkm.value?.anggota ?? []).map((a) => ({
-        anggota_id: a.id,
-        nama: a.nama,
-        nim: a.nim || '-',
-        status_kehadiran: 'Hadir',
-        keterangan: '',
-    }))
-    form.anggota = anggotaRows.value
-}
+// A watcher is used instead of an @change listener because handler order
+// between the component's own update:modelValue emit and a caller-supplied
+// @change is not guaranteed, which left form.ukm_id stale while the members
+// were being read.
+watch(
+    () => form.ukm_id,
+    (ukmId) => {
+        if (!ukmId) {
+            anggotaRows.value = []
+            form.anggota = []
+            return
+        }
+
+        const anggota = props.ukmList.find((u) => String(u.id) === String(ukmId))?.anggota ?? []
+
+        anggotaRows.value = anggota.map((a) => ({
+            anggota_id: a.id,
+            nama: a.nama,
+            nim: a.nim || '-',
+            status_kehadiran: 'Hadir',
+            keterangan: '',
+        }))
+        form.anggota = anggotaRows.value
+    },
+    { immediate: true },
+)
 
 const setStatus = (row, status) => {
     row.status_kehadiran = status
@@ -134,7 +150,7 @@ const submit = () => {
             <template #actions>
                 <Link
                     :href="routeFn('presensi.index')"
-                    class="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
+                    class="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
                 >
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
@@ -173,7 +189,7 @@ const submit = () => {
                 <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <div>
                         <label class="mb-1.5 block text-sm font-semibold text-gray-700">Nama UKM <span class="text-red-500">*</span></label>
-                        <Select v-model="form.ukm_id" @change="onUkmChange">
+                        <Select v-model="form.ukm_id">
                             <option value="">-- Pilih UKM --</option>
                             <option v-for="u in ukmList" :key="u.id" :value="u.id">
                                 {{ u.name }}

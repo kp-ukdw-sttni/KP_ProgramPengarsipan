@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\AksesDokumen;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,6 +19,7 @@ class Peminjaman extends Model
         'status_approval',
         'borrowed_at',
         'expired_at',
+        'reviewed_at',
         'approved_by',
         'notes',
     ];
@@ -25,6 +27,7 @@ class Peminjaman extends Model
     protected $casts = [
         'borrowed_at' => 'datetime',
         'expired_at' => 'datetime',
+        'reviewed_at' => 'datetime',
     ];
 
     /**
@@ -52,13 +55,24 @@ class Peminjaman extends Model
     }
 
     /**
-     * Determine if this borrowing record is currently active and approved.
+     * Decide whether this grant currently lets the requester read the document.
+     *
+     * Access is granted permanently: `Approved` is the only state that opens a
+     * restricted document, and `expired_at` has been cleared for legacy
+     * time-boxed grants by the migration. This mirrors
+     * {@see AksesDokumen::hasAksesDisetujui()} on purpose — the
+     * list flag and the download guard must never disagree.
      */
     public function isActive(): bool
     {
-        return $this->status_approval === 'Approved'
-            && $this->borrowed_at !== null
-            && $this->expired_at !== null
-            && now()->between($this->borrowed_at, $this->expired_at);
+        return $this->status_approval === 'Approved';
+    }
+
+    /**
+     * Has this request been decided?
+     */
+    public function sudahDiproses(): bool
+    {
+        return $this->status_approval !== 'Pending';
     }
 }

@@ -4,9 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
 
 class Arsip extends Model
@@ -23,6 +23,7 @@ class Arsip extends Model
         'kategori_id',
         'divisi_id',
         'study_program_id',
+        'nama_prodi',
         'tahun',
         'tanggal_dokumen',
         'tanggal_diterima',
@@ -61,7 +62,11 @@ class Arsip extends Model
         });
 
         static::deleted(function ($arsip) {
-            self::logAction('Delete', $arsip, "Menghapus (Soft Delete) arsip '{$arsip->judul}' (Nomor: {$arsip->nomor_arsip}).");
+            $details = $arsip->isForceDeleting()
+                ? "Menghapus permanen arsip '{$arsip->judul}' (Nomor: {$arsip->nomor_arsip}, ID: {$arsip->id})."
+                : "Menghapus (Soft Delete) arsip '{$arsip->judul}' (Nomor: {$arsip->nomor_arsip}).";
+
+            self::logAction('Delete', $arsip, $details);
         });
 
         static::restored(function ($arsip) {
@@ -74,7 +79,9 @@ class Arsip extends Model
         AuditLog::create([
             'user_id' => Auth::id() ?? $arsip->uploader_id,
             'action' => $action,
-            'arsip_id' => $arsip->id,
+            // A force deleted record is already gone, so the foreign key has to
+            // stay null or the insert fails on audit_logs_arsip_id_foreign.
+            'arsip_id' => $arsip->isForceDeleting() ? null : $arsip->id,
             'ip_address' => request()->ip(),
             'details' => $details,
         ]);

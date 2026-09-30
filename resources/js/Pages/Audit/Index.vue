@@ -83,7 +83,32 @@ const actionColors = {
     'Create Arsip': 'blue',
     'Update Arsip': 'indigo',
     'Delete Arsip': 'red',
+    Submit: 'blue',
+    Verifikasi: 'green',
+    Tolak: 'red',
+    'Request Access': 'amber',
+    'Approve Access': 'green',
+    'Reject Access': 'red',
+    'Revoke Access': 'red',
 }
+
+// Kept in sync with the actions written by the services, otherwise an
+// access decision would land in the log with no way to filter it out.
+const actionOptions = [
+    'Login',
+    'Logout',
+    'Create',
+    'Update',
+    'Delete',
+    'Download',
+    'Submit',
+    'Verifikasi',
+    'Tolak',
+    'Request Access',
+    'Approve Access',
+    'Reject Access',
+    'Revoke Access',
+]
 
 const formatDate = (value) => {
     if (!value) return '-'
@@ -118,12 +143,7 @@ const formatDate = (value) => {
                 </Select>
                 <Select v-model="action">
                     <option value="">Semua Aksi</option>
-                    <option value="Login">Login</option>
-                    <option value="Logout">Logout</option>
-                    <option value="Download">Download</option>
-                    <option value="Create">Create</option>
-                    <option value="Update">Update</option>
-                    <option value="Delete">Delete</option>
+                    <option v-for="a in actionOptions" :key="a" :value="a">{{ a }}</option>
                 </Select>
                 <Input v-model="startDate" type="date" />
                 <Input v-model="endDate" type="date" />

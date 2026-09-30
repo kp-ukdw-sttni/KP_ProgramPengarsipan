@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreArsipRequest;
 use App\Models\Arsip;
 use App\Models\AuditLog;
 use App\Services\ArsipService;
@@ -47,7 +48,7 @@ class ArsipController extends Controller
     /**
      * Store multiple uploaded files as archive records in secure storage.
      */
-    public function store(\App\Http\Requests\StoreArsipRequest $request)
+    public function store(StoreArsipRequest $request)
     {
         $user = Auth::user();
 
@@ -88,8 +89,10 @@ class ArsipController extends Controller
             'judul' => ['required', 'string', 'max:255'],
             'deskripsi' => ['nullable', 'string'],
             'kategori_id' => ['required', 'exists:kategori_arsip,id'],
-            'divisi_id' => ['required', 'exists:divisi,id'],
-            'study_program_id' => ['nullable', 'exists:study_programs,id'],
+            'divisi_id' => ['nullable', 'exists:divisi,id'],
+            'tanpa_divisi' => ['nullable', 'boolean'],
+            'nama_prodi' => ['nullable', 'string', 'max:255'],
+            'tanpa_prodi' => ['nullable', 'boolean'],
             'tahun' => ['nullable', 'integer', 'min:1990', 'max:'.now()->year],
             'tanggal_dokumen' => ['nullable', 'date'],
             'tanggal_diterima' => ['nullable', 'date'],
@@ -167,8 +170,8 @@ class ArsipController extends Controller
     {
         $user = Auth::user();
 
-        if (! $user->hasRole('Superadmin')) {
-            abort(403, 'Hanya Superadmin yang diizinkan menghapus arsip secara permanen.');
+        if (! $user->hasRole('Admin') && ! $user->hasRole('Superadmin')) {
+            abort(403, 'Hanya Admin atau Superadmin yang diizinkan menghapus arsip secara permanen.');
         }
 
         $this->arsipService->forceDeleteArchive($id);

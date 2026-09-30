@@ -3,10 +3,9 @@
 namespace App\Services;
 
 use App\Models\Arsip;
-use App\Models\Divisi;
-use App\Models\KategoriArsip;
 use App\Models\Peminjaman;
 use App\Models\User;
+use App\Support\MasterData;
 
 class DashboardService
 {
@@ -15,10 +14,8 @@ class DashboardService
      */
     public function getDashboardData(User $user): array
     {
-        $totalArsip = Arsip::count();
+        $stats = MasterData::stats();
         $totalPendingPeminjaman = Peminjaman::where('status_approval', 'Pending')->count();
-        $totalKategori = KategoriArsip::whereNull('parent_id')->count();
-        $totalDivisi = Divisi::count();
 
         $recentUploads = Arsip::with(['divisi', 'kategori', 'uploader'])
             ->latest()
@@ -26,10 +23,10 @@ class DashboardService
             ->get();
 
         return [
-            'totalArsip' => $totalArsip,
+            'totalArsip' => $stats['arsip'],
             'totalPendingPeminjaman' => $totalPendingPeminjaman,
-            'totalKategori' => $totalKategori,
-            'totalDivisi' => $totalDivisi,
+            'totalKategori' => $stats['kategori'],
+            'totalDivisi' => $stats['divisi'],
             'recentUploads' => $recentUploads,
         ];
     }

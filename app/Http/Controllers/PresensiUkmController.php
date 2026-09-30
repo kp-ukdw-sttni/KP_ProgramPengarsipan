@@ -64,6 +64,27 @@ class PresensiUkmController extends Controller
     }
 
     /**
+     * Delete a session; the generated rekap archive goes to the Recycle Bin.
+     */
+    public function destroy(PresensiUkm $presensi)
+    {
+        $user = Auth::user();
+
+        abort_unless(
+            $this->presensiService->canDelete($presensi, $user),
+            403,
+            $presensi->status_arsip === 'Terverifikasi'
+                ? 'Presensi yang sudah terverifikasi tidak dapat dihapus.'
+                : 'Anda tidak diizinkan menghapus presensi ini.'
+        );
+
+        $this->presensiService->delete($presensi, $user);
+
+        return redirect()->route('presensi.index')
+            ->with('success', 'Presensi dihapus. Arsip rekapnya dipindahkan ke Recycle Bin.');
+    }
+
+    /**
      * JSON list of active members for the chosen UKM.
      */
     public function anggotaByUkm(Ukm $ukm)

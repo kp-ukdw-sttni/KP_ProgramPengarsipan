@@ -48,7 +48,7 @@ const props = defineProps({
     },
 })
 
-const { user, hasRole, canManageArsip, canViewFile } = useAuth()
+const { user, hasRole, canManageArsip, canViewFile, canRequestAccess } = useAuth()
 const routeFn = useRoute()
 const { start: feedbackStart, success: feedbackSuccess, error: feedbackError } = useUploadFeedback()
 const { open: openUploadModal } = useUploadModal()
@@ -60,7 +60,26 @@ const previewArsip = ref(null)
 const deleteArsip = ref(null)
 const deleting = ref(false)
 
-const canRequest = computed(() => false) // Fitur peminjaman dinonaktifkan
+// Permission status is resolved server-side; these only map it to wording.
+const requestLabel = (arsip) => {
+    if (arsip.status_permintaan === 'Pending') return 'Menunggu Persetujuan'
+    if (arsip.status_permintaan === 'Approved') return 'Akses Disetujui'
+    if (arsip.status_permintaan === 'Rejected') return 'Ditolak'
+    return 'Minta Akses'
+}
+
+const submitRequest = (arsip) => {
+    feedbackStart('Mengirim permintaan akses...')
+    router.post(
+        routeFn('peminjaman.request', arsip.id),
+        {},
+        {
+            preserveScroll: true,
+            onSuccess: () => feedbackSuccess('Permintaan akses dikirim ke Admin.'),
+            onError: () => feedbackError('Gagal mengirim permintaan akses'),
+        }
+    )
+}
 
 const isPdf = (arsip) => (arsip.file_path ?? '').toLowerCase().endsWith('.pdf')
 
@@ -144,7 +163,7 @@ const performDelete = () => {
                 <div v-if="hasRole('Superadmin', 'Operator', 'Staf TU')" class="flex flex-wrap items-center gap-2">
                     <button
                         type="button"
-                        class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-600/40 transition hover:from-blue-700 hover:to-blue-800"
+                        class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-600/40 transition hover:bg-blue-700"
                         @click="openUploadModal"
                     >
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -154,7 +173,7 @@ const performDelete = () => {
                     </button>
                     <Link
                         :href="routeFn('arsip.explorer')"
-                        class="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
+                        class="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
                     >
                         Jelajah Folder
                     </Link>
@@ -208,7 +227,27 @@ const performDelete = () => {
                                 >
                                     {{ item.judul }}
                                 </button>
-                                <span v-else class="block leading-tight font-semibold text-gray-900">{{ item.judul }}</span>
+                                <span
+                                    v-else
+                                    class="flex items-center gap-1.5 leading-tight font-semibold text-gray-900"
+                                    :title="item.bisa_diakses ? '' : 'Dokumen rahasia — perlu izin dari Admin'"
+                                >
+                                    <svg
+                                        v-if="!item.bisa_diakses"
+                                        class="h-3.5 w-3.5 shrink-0 text-amber-600"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                                        />
+                                    </svg>
+                                    {{ item.judul }}
+                                </span>
                                 <div class="mt-1 flex flex-wrap items-center gap-x-2 text-[11px] text-gray-400">
                                     <code>{{ item.nomor_arsip }}</code>
                                     <template v-if="item.nomor_surat">
@@ -258,6 +297,30 @@ const performDelete = () => {
                                     >
                                         Unduh
                                     </button>
+
+                                    <button
+                                        v-if="canRequestAccess(item)"
+                                        type="button"
+                                        class="rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-700 transition hover:bg-amber-100"
+                                        :title="`Minta izin membuka dokumen rahasia: ${item.judul}`"
+                                        @click="submitRequest(item)"
+                                    >
+                                        {{ requestLabel(item) }}
+                                    </button>
+                                    <span
+                                        v-else-if="!canViewFile(item) && item.status_permintaan === 'Pending'"
+                                        class="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1.5 text-[11px] font-semibold text-amber-700"
+                                        title="Permintaan Anda sedang menunggu keputusan Admin"
+                                    >
+                                        Menunggu Persetujuan
+                                    </span>
+                                    <span
+                                        v-else-if="!canViewFile(item) && item.status_permintaan === 'Rejected'"
+                                        class="inline-flex items-center gap-1 rounded-lg bg-gray-100 px-2.5 py-1.5 text-[11px] font-semibold text-gray-500"
+                                        title="Permintaan Anda ditolak"
+                                    >
+                                        Akses Ditolak
+                                    </span>
 
                                     <Link
                                         v-if="canManageArsip(item)"

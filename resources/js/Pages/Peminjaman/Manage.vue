@@ -1,12 +1,11 @@
 <script setup>
 import { computed, ref } from "vue";
-import { router, useForm } from "@inertiajs/vue3";
+import { useForm } from "@inertiajs/vue3";
 import AuthenticatedLayout from "../../Layouts/AuthenticatedLayout.vue";
 import FlashMessages from "../../Components/ui/FlashMessages.vue";
 import Badge from "../../Components/ui/Badge.vue";
 import Modal from "../../Components/ui/Modal.vue";
 import Pagination from "../../Components/ui/Pagination.vue";
-import Input from "../../Components/ui/Input.vue";
 import InputError from "../../Components/ui/InputError.vue";
 import PrimaryButton from "../../Components/ui/PrimaryButton.vue";
 import SecondaryButton from "../../Components/ui/SecondaryButton.vue";
@@ -31,18 +30,20 @@ const paginationLinks = computed(() => props.peminjaman.links ?? []);
 
 const approveTarget = ref(null);
 const rejectTarget = ref(null);
-const working = ref(false);
+const revokeTarget = ref(null);
 
-const approveForm = useForm({
-    duration: 24,
-});
+// The reason is mandatory server-side, so the form carries it rather than
+// posting an empty payload (which previously always failed validation).
+const approveForm = useForm({ notes: "" });
+const rejectForm = useForm({ notes: "" });
+const revokeForm = useForm({ notes: "" });
 
 const statusBadge = (p) => {
     const map = {
-        Pending: { label: "Pending", color: "amber" },
-        Approved: { label: "Approved", color: "green" },
+        Pending: { label: "Menunggu", color: "amber" },
+        Approved: { label: "Disetujui", color: "green" },
         Rejected: { label: "Ditolak", color: "red" },
-        Expired: { label: "Expired", color: "gray" },
+        Expired: { label: "Kedaluwarsa", color: "gray" },
     };
     return (
         map[p.status_approval] ?? { label: p.status_approval, color: "gray" }
@@ -70,6 +71,7 @@ const openApprove = (p) => {
 
 const submitApprove = () => {
     approveForm.post(routeFn("peminjaman.approve", approveTarget.value.id), {
+        preserveScroll: true,
         onSuccess: () => {
             approveTarget.value = null;
         },
@@ -77,28 +79,38 @@ const submitApprove = () => {
 };
 
 const confirmReject = (p) => {
+    rejectForm.reset();
+    rejectForm.clearErrors();
     rejectTarget.value = p;
 };
 
 const submitReject = () => {
-    if (!rejectTarget.value) return;
-    working.value = true;
-    router.post(
-        routeFn("peminjaman.reject", rejectTarget.value.id),
-        {},
-        {
-            preserveScroll: true,
-            onFinish: () => {
-                working.value = false;
-                rejectTarget.value = null;
-            },
+    rejectForm.post(routeFn("peminjaman.reject", rejectTarget.value.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            rejectTarget.value = null;
         },
-    );
+    });
+};
+
+const confirmRevoke = (p) => {
+    revokeForm.reset();
+    revokeForm.clearErrors();
+    revokeTarget.value = p;
+};
+
+const submitRevoke = () => {
+    revokeForm.post(routeFn("peminjaman.revoke", revokeTarget.value.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            revokeTarget.value = null;
+        },
+    });
 };
 
 const statCards = computed(() => [
-    { label: "Pending", value: props.pendingCount, bg: "bg-amber-500" },
-    { label: "Approved", value: props.approvedCount, bg: "bg-green-600" },
+    { label: "Menunggu", value: props.pendingCount, bg: "bg-amber-500" },
+    { label: "Disetujui", value: props.approvedCount, bg: "bg-green-600" },
     { label: "Ditolak", value: props.rejectedCount, bg: "bg-red-500" },
 ]);
 </script>
@@ -182,22 +194,22 @@ const statCards = computed(() => [
                         >
                             <td class="px-5 py-4">
                                 <div class="font-semibold text-gray-900">
-                                    {{ p.user?.name }}
+                                    {{ p.user?.name ?? 'Pengguna Tidak Ditemukan' }}
                                 </div>
                                 <div class="mt-0.5 text-[11px] text-gray-400">
-                                    {{ p.user?.email }}
+                                    {{ p.user?.email ?? '-' }}
                                 </div>
                             </td>
                             <td class="max-w-xs px-5 py-4">
                                 <div
                                     class="leading-tight font-semibold text-gray-800"
                                 >
-                                    {{ p.arsip?.judul }}
+                                    {{ p.arsip?.judul ?? 'Dokumen Tidak Ditemukan' }}
                                 </div>
                                 <div class="mt-1 text-[11px] text-gray-400">
-                                    <code>{{ p.arsip?.nomor_arsip }}</code>
-                                    &bull; {{ p.arsip?.kategori?.name }} &bull;
-                                    {{ p.arsip?.divisi?.name }}
+                                    <code>{{ p.arsip?.nomor_arsip ?? '-' }}</code>
+                                    &bull; {{ p.arsip?.kategori?.name ?? 'Tanpa Kategori' }} &bull;
+                                    {{ p.arsip?.divisi?.name ?? (p.arsip?.study_program?.name ?? 'Tanpa Unit') }}
                                 </div>
                             </td>
                             <td class="px-5 py-4">
@@ -235,9 +247,35 @@ const statCards = computed(() => [
                                         p.status_approval === 'Approved' &&
                                         p.approver
                                     "
-                                    class="text-[11px] text-gray-400"
+                                    class="inline-flex items-center gap-2 text-[11px] text-gray-400"
                                 >
-                                    oleh {{ p.approver?.name }}
+                                    oleh {{ p.approver?.name ?? 'Admin' }}
+                                    <button
+                                        type="button"
+                                        class="rounded-md px-2 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-50"
+                                        @click="confirmRevoke(p)"
+                                    >
+                                        Cabut
+                                    </button>
+                                </span>
+                                <span
+                                    v-else-if="p.status_approval === 'Approved'"
+                                    class="inline-flex items-center gap-2 text-[11px] text-gray-400"
+                                >
+                                    <button
+                                        type="button"
+                                        class="rounded-md px-2 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-50"
+                                        @click="confirmRevoke(p)"
+                                    >
+                                        Cabut
+                                    </button>
+                                </span>
+                                <span
+                                    v-else-if="p.status_approval === 'Rejected' && p.notes"
+                                    class="block max-w-[14rem] text-[11px] text-gray-400"
+                                    :title="p.notes"
+                                >
+                                    {{ p.notes }}
                                 </span>
                                 <span v-else class="text-xs text-gray-300"
                                     >-</span
@@ -271,22 +309,28 @@ const statCards = computed(() => [
                     </p>
                 </div>
                 <div class="px-6 py-5">
-                    <label
-                        class="mb-1 block text-[11px] font-semibold text-gray-500"
+                    <p
+                        class="rounded-lg bg-green-50 px-3 py-2.5 text-xs text-green-800"
                     >
-                        Durasi Akses (jam)
-                    </label>
-                    <Input
-                        v-model="approveForm.duration"
-                        type="number"
-                        min="1"
-                        max="168"
-                    />
-                    <InputError :message="approveForm.errors.duration" />
-                    <p class="mt-2 text-xs text-gray-400">
-                        Maksimal 168 jam (7 hari). Pemohon dapat mengakses
-                        dokumen selama durasi ini.
+                        Setelah disetujui,
+                        <span class="font-semibold">{{
+                            approveTarget.user?.name
+                        }}</span>
+                        dapat membuka dan mengunduh dokumen ini tanpa batas
+                        waktu. Anda tetap dapat mencabut izinnya kapan saja.
                     </p>
+                    <label
+                        class="mb-1 mt-4 block text-[11px] font-semibold text-gray-500"
+                    >
+                        Catatan (opsional)
+                    </label>
+                    <textarea
+                        v-model="approveForm.notes"
+                        rows="2"
+                        class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        placeholder="Contoh:ctoasan rapat komite, 12 Sep 2026"
+                    />
+                    <InputError :message="approveForm.errors.notes" />
                 </div>
                 <div
                     class="flex items-center justify-end gap-2 border-t border-gray-100 px-6 py-4"
@@ -308,51 +352,102 @@ const statCards = computed(() => [
             max-width="sm"
             @close="rejectTarget = null"
         >
-            <div v-if="rejectTarget" class="p-6">
-                <div class="flex items-start gap-4">
-                    <div
-                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-100"
-                    >
-                        <svg
-                            class="h-6 w-6 text-red-600"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            viewBox="0 0 24 24"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M6 18L18 6M6 6l12 12"
-                            />
-                        </svg>
-                    </div>
-                    <div class="min-w-0">
-                        <h3 class="text-sm font-bold text-gray-900">
-                            Tolak pengajuan?
-                        </h3>
-                        <p class="mt-1 text-xs text-gray-500">
-                            Pengajuan
-                            <span class="font-semibold">{{
-                                rejectTarget.user?.name
-                            }}</span>
-                            untuk
-                            <span class="font-semibold">{{
-                                rejectTarget.arsip?.judul
-                            }}</span>
-                            akan ditolak.
-                        </p>
-                    </div>
+            <form v-if="rejectTarget" @submit.prevent="submitReject">
+                <div class="border-b border-gray-100 px-6 py-4">
+                    <h3 class="text-sm font-bold text-gray-900">
+                        Tolak pengajuan?
+                    </h3>
+                    <p class="mt-0.5 text-xs text-gray-500">
+                        Pengajuan
+                        <span class="font-semibold">{{
+                            rejectTarget.user?.name
+                        }}</span>
+                        untuk
+                        <span class="font-semibold">{{
+                            rejectTarget.arsip?.judul
+                        }}</span>
+                        akan ditolak.
+                    </p>
                 </div>
-                <div class="mt-5 flex items-center justify-end gap-2">
+                <div class="px-6 py-5">
+                    <label
+                        class="mb-1 block text-[11px] font-semibold text-gray-500"
+                    >
+                        Alasan penolakan <span class="text-red-500">*</span>
+                    </label>
+                    <textarea
+                        v-model="rejectForm.notes"
+                        rows="3"
+                        class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-red-500 focus:ring-red-500"
+                        placeholder="Contoh: dokumen memuat data pribadi mahasiswa"
+                    />
+                    <InputError :message="rejectForm.errors.notes" />
+                </div>
+                <div
+                    class="flex items-center justify-end gap-2 border-t border-gray-100 px-6 py-4"
+                >
                     <SecondaryButton type="button" @click="rejectTarget = null"
                         >Batal</SecondaryButton
                     >
-                    <DangerButton :disabled="working" @click="submitReject">
-                        {{ working ? "Menolak..." : "Ya, Tolak" }}
+                    <DangerButton
+                        type="submit"
+                        :disabled="rejectForm.processing"
+                    >
+                        {{
+                            rejectForm.processing ? "Menolak..." : "Ya, Tolak"
+                        }}
                     </DangerButton>
                 </div>
-            </div>
+            </form>
+        </Modal>
+
+        <Modal
+            :show="!!revokeTarget"
+            max-width="sm"
+            @close="revokeTarget = null"
+        >
+            <form v-if="revokeTarget" @submit.prevent="submitRevoke">
+                <div class="border-b border-gray-100 px-6 py-4">
+                    <h3 class="text-sm font-bold text-gray-900">
+                        Cabut izin akses?
+                    </h3>
+                    <p class="mt-0.5 text-xs text-gray-500">
+                        <span class="font-semibold">{{
+                            revokeTarget.user?.name
+                        }}</span>
+                        akan langsung kehilangan akses ke
+                        <span class="font-semibold">{{
+                            revokeTarget.arsip?.judul
+                        }}</span>.
+                    </p>
+                </div>
+                <div class="px-6 py-5">
+                    <label
+                        class="mb-1 block text-[11px] font-semibold text-gray-500"
+                    >
+                        Alasan pencabutan <span class="text-red-500">*</span>
+                    </label>
+                    <textarea
+                        v-model="revokeForm.notes"
+                        rows="3"
+                        class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-red-500 focus:ring-red-500"
+                        placeholder="Contoh: alasan peminjaman sudah selesai"
+                    />
+                    <InputError :message="revokeForm.errors.notes" />
+                </div>
+                <div
+                    class="flex items-center justify-end gap-2 border-t border-gray-100 px-6 py-4"
+                >
+                    <SecondaryButton type="button" @click="revokeTarget = null"
+                        >Batal</SecondaryButton
+                    >
+                    <DangerButton type="submit" :disabled="revokeForm.processing">
+                        {{
+                            revokeForm.processing ? "Mencabut..." : "Ya, Cabut"
+                        }}
+                    </DangerButton>
+                </div>
+            </form>
         </Modal>
     </AuthenticatedLayout>
 </template>

@@ -1,5 +1,5 @@
 <script setup>
-import { useForm, Link } from '@inertiajs/vue3'
+import { useForm, usePage, Link } from '@inertiajs/vue3'
 import AuthenticatedLayout from '../../Layouts/AuthenticatedLayout.vue'
 import FlashMessages from '../../Components/ui/FlashMessages.vue'
 import Input from '../../Components/ui/Input.vue'
@@ -9,7 +9,7 @@ import PageHero from '../../Components/ui/PageHero.vue'
 import PrimaryButton from '../../Components/ui/PrimaryButton.vue'
 import { useRoute } from '../../Composables/useRoute'
 import { useUploadFeedback } from '../../Composables/useUploadFeedback'
-import { ref } from 'vue'
+import { ref, watch, computed } from 'vue'
 
 const props = defineProps({
     arsip: {
@@ -34,6 +34,13 @@ const props = defineProps({
     },
 })
 
+const page = usePage()
+const currentUser = computed(() => page.props.auth?.user)
+const userRoles = computed(() => currentUser.value?.roles ?? [])
+const isAdminOrSuperadmin = computed(() =>
+    userRoles.value.some(r => ['Admin', 'Superadmin'].includes(r))
+)
+
 const routeFn = useRoute()
 const { start: feedbackStart, success: feedbackSuccess, error: feedbackError } = useUploadFeedback()
 
@@ -47,8 +54,9 @@ const form = useForm({
     judul: props.arsip.judul ?? '',
     deskripsi: props.arsip.deskripsi ?? '',
     kategori_id: props.arsip.kategori_id ?? '',
-    divisi_id: props.arsip.divisi_id ?? '',
-    study_program_id: props.arsip.study_program_id ?? '',
+    divisi_id: props.arsip.divisi_id ?? currentUser.value?.divisi_id ?? '',
+    nama_prodi: props.arsip.nama_prodi ?? '',
+    tanpa_prodi: !props.arsip.nama_prodi,
     tahun: props.arsip.tahun ?? '',
     tanggal_dokumen: (props.arsip.tanggal_dokumen ?? '').slice(0, 10),
     tanggal_diterima: (props.arsip.tanggal_diterima ?? '').slice(0, 10),
@@ -61,6 +69,18 @@ const form = useForm({
     tags: props.arsip.tags ?? '',
     file: null,
     change_note: '',
+})
+
+const toggleTanpaProdi = () => {
+    if (form.tanpa_prodi) {
+        form.nama_prodi = ''
+    }
+}
+
+watch(() => form.nama_prodi, (newVal) => {
+    if (newVal) {
+        form.tanpa_prodi = false
+    }
 })
 
 const onFileSelected = (event) => {
@@ -94,7 +114,7 @@ const submit = () => {
             <template #actions>
                 <Link
                     :href="routeFn('arsip.index')"
-                    class="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
+                    class="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
                 >
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
@@ -175,8 +195,11 @@ const submit = () => {
                                 <InputError :message="form.errors.kategori_id" />
                             </div>
 
-                            <div>
-                                <label class="mb-1 block text-[11px] font-semibold text-gray-500">Divisi</label>
+                            <!-- Unit Kerja (Tampil dropdown hanya untuk Admin / Superadmin; untuk Dosen/Staf otomatis dari akun) -->
+                            <div v-if="isAdminOrSuperadmin" class="sm:col-span-1">
+                                <label class="mb-1 block text-[11px] font-semibold text-gray-500">
+                                    Divisi / Unit Kerja <span class="text-red-500">*</span>
+                                </label>
                                 <Select v-model="form.divisi_id">
                                     <option value="">-- Pilih Divisi --</option>
                                     <template v-for="f in divisiTree" :key="f.id">
@@ -189,13 +212,46 @@ const submit = () => {
                                 <InputError :message="form.errors.divisi_id" />
                             </div>
 
-                            <div>
-                                <label class="mb-1 block text-[11px] font-semibold text-gray-500">Program Studi</label>
-                                <Select v-model="form.study_program_id">
-                                    <option value="">-- Pilih Program Studi --</option>
-                                    <option v-for="sp in studyPrograms" :key="sp.id" :value="sp.id">{{ sp.name }}</option>
-                                </Select>
-                                <InputError :message="form.errors.study_program_id" />
+                            <div v-else class="sm:col-span-1 flex flex-col justify-center rounded-xl border border-blue-100 bg-blue-50/60 p-3.5">
+                                <label class="block text-[11px] font-bold uppercase tracking-wider text-blue-900">
+                                    Unit Kerja Pengunggah
+                                </label>
+                                <div class="mt-1 flex items-center justify-between gap-2">
+                                    <span class="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1 text-xs font-bold text-white shadow-sm">
+                                        🏢 {{ currentUser?.divisi?.name ?? arsip.divisi?.name ?? 'Unit Kerja Anda' }}
+                                    </span>
+                                </div>
+                                <span class="mt-1 text-[11px] text-blue-600 italic">Otomatis mewakili akun</span>
+                            </div>
+
+                            <!-- Program Studi (Dengan Toggle Checkbox "Tanpa Program Studi") -->
+                            <div class="sm:col-span-1 rounded-xl border p-3.5 transition-colors duration-200"
+                                :class="!form.tanpa_prodi ? 'border-indigo-200 bg-indigo-50/30' : 'border-gray-100 bg-gray-100/60'"
+                            >
+                                <div class="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                                    <label class="text-xs font-semibold text-gray-700">
+                                        Program Studi
+                                        <span v-if="!form.tanpa_prodi" class="text-red-500">*</span>
+                                        <span v-else class="ml-1 text-[11px] font-normal text-gray-400">(Opsional)</span>
+                                    </label>
+                                    <label class="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-indigo-600">
+                                        <input
+                                            v-model="form.tanpa_prodi"
+                                            type="checkbox"
+                                            class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                            @change="toggleTanpaProdi"
+                                        />
+                                        Tanpa Program Studi
+                                    </label>
+                                </div>
+                                <Input
+                                    v-model="form.nama_prodi"
+                                    type="text"
+                                    :disabled="form.tanpa_prodi"
+                                    placeholder="Contoh: Sistem Informasi"
+                                    :class="{ 'border-red-500 focus:border-red-500 focus:ring-red-500/20': form.errors.nama_prodi, 'bg-gray-100 text-gray-400 cursor-not-allowed': form.tanpa_prodi }"
+                                />
+                                <InputError :message="form.errors.nama_prodi" class="mt-1" />
                             </div>
 
                             <div>

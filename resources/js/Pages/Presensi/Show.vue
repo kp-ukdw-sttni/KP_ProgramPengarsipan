@@ -58,7 +58,7 @@ const openExcel = () => window.open(routeFn('presensi.excel', { presensi: props.
             <template #actions>
                 <Link
                     :href="routeFn('presensi.index')"
-                    class="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
+                    class="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
                 >
                     Kembali
                 </Link>

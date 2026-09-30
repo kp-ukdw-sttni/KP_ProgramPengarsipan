@@ -5,9 +5,12 @@ namespace App\Services;
 use App\Models\Arsip;
 use App\Models\ArsipVersion;
 use App\Models\Divisi;
-use App\Models\KategoriArsip;
+use App\Models\Peminjaman;
 use App\Models\StudyProgram;
 use App\Models\User;
+use App\Support\AksesDokumen;
+use App\Support\MasterData;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -66,15 +69,48 @@ class ArsipService
 
         $arsip = $query->latest()->paginate(10)->withQueryString();
 
+        $this->lampirkanStatusAkses($arsip, $user);
+
         return [
-            'arsip'         => $arsip,
-            'filters'       => $request->only(['search', 'kategori_id', 'divisi_id', 'study_program_id', 'tahun', 'status_publikasi', 'status']),
-            'kategori'      => KategoriArsip::orderBy('name')->get(),
-            'kategoriTree'  => $this->kategoriTree(),
-            'divisiTree'    => $this->divisiTree(),
-            'studyPrograms' => StudyProgram::orderBy('name')->get(),
-            'tahunList'     => $this->tahunList(),
+            'arsip' => $arsip,
+            'filters' => $request->only(['search', 'kategori_id', 'divisi_id', 'study_program_id', 'tahun', 'status_publikasi', 'status']),
+            'kategori' => MasterData::kategoriFlat(),
+            'kategoriTree' => MasterData::kategoriTree(),
+            'divisiTree' => MasterData::divisiTree(),
+            'studyPrograms' => MasterData::studyPrograms(),
+            'tahunList' => MasterData::tahunList(),
         ];
+    }
+
+    /**
+     * Annotate each row with what the current user may actually do, so the list
+     * can show a locked Confidential document plus a "Minta Akses" button
+     * instead of guessing from the publication level alone.
+     *
+     * Resolved server-side on purpose: the old client-side canViewFile() had no
+     * notion of an approved request, so an approved user saw no buttons.
+     */
+    private function lampirkanStatusAkses($paginator, User $user): void
+    {
+        $ids = $paginator->getCollection()->pluck('id')->all();
+
+        if ($ids === []) {
+            return;
+        }
+
+        $requests = Peminjaman::whereIn('arsip_id', $ids)
+            ->where('user_id', $user->id)
+            ->get()
+            ->groupBy('arsip_id');
+
+        $paginator->getCollection()->each(function (Arsip $arsip) use ($requests, $user) {
+            $request = $requests->get($arsip->id)?->sortByDesc('id')->first();
+
+            $arsip->setAttribute('bisa_diakses', AksesDokumen::canAccess($arsip, $user));
+            $arsip->setAttribute('butuh_persetujuan', AksesDokumen::perluPersetujuan($arsip));
+            $arsip->setAttribute('status_permintaan', $request?->status_approval ?? null);
+            $arsip->setAttribute('permintaan_id', $request?->id ?? null);
+        });
     }
 
     /**
@@ -84,9 +120,9 @@ class ArsipService
     {
         return [
             'divisiTree' => $this->divisiTree($user->hasRole('Operator') || $user->hasRole('Staf TU')),
-            'kategoriTree' => $this->kategoriTree(),
-            'studyPrograms' => StudyProgram::orderBy('name')->get(),
-            'tahunList' => $this->tahunList(),
+            'kategoriTree' => MasterData::kategoriTree(),
+            'studyPrograms' => MasterData::studyPrograms(),
+            'tahunList' => MasterData::tahunList(),
         ];
     }
 
@@ -96,7 +132,7 @@ class ArsipService
     public function storeFiles(Request $request, User $user): int
     {
         // Ambil tahun dari tanggal dokumen (YYYY)
-        $tahun = \Carbon\Carbon::parse($request->tanggal_dokumen)->year;
+        $tahun = Carbon::parse($request->tanggal_dokumen)->year;
         $createdCount = 0;
 
         $publikasiMap = [
@@ -109,17 +145,25 @@ class ArsipService
 
         $nomorSurat = $request->boolean('tanpa_nomor_surat') ? 'Tanpa Nomor' : ($request->nomor_surat ?: 'Tanpa Nomor');
 
+        $divisiId = $request->divisi_id;
+        if (! $divisiId && ! $user->hasRole('Admin') && ! $user->hasRole('Superadmin')) {
+            $divisiId = $user->divisi_id;
+        }
+
+        $namaProdi = $request->boolean('tanpa_prodi') ? null : ($request->nama_prodi ?: null);
+
         foreach ($request->file('files') as $index => $file) {
             $judul = $request->judul[$index] ?? 'Dokumen tanpa judul';
 
             // Automatic unique file naming
             $extension = $file->getClientOriginalExtension() ?: 'pdf';
             $fileName = Str::slug($judul).'-'.uniqid().'.'.strtolower($extension);
-            $fileSubPath = 'private/archives/'.$request->divisi_id.'/'.$tahun;
+            $subFolder = $divisiId ? 'divisi/'.$divisiId : 'prodi/'.Str::slug($namaProdi ?: 'general');
+            $fileSubPath = 'private/archives/'.$subFolder.'/'.$tahun;
             $filePath = Storage::disk('local')->putFileAs($fileSubPath, $file, $fileName);
 
             // Automatic nomor_arsip when not provided
-            $nomorArsip = $request->nomor_arsip[$index] ?? $this->generateNomorArsip($request->divisi_id, $tahun);
+            $nomorArsip = $request->nomor_arsip[$index] ?? $this->generateNomorArsip($divisiId, $tahun, null);
 
             $arsip = Arsip::create([
                 'nomor_arsip' => $nomorArsip,
@@ -127,8 +171,9 @@ class ArsipService
                 'judul' => $judul,
                 'deskripsi' => $request->deskripsi,
                 'kategori_id' => $request->kategori_id,
-                'divisi_id' => $request->divisi_id,
-                'study_program_id' => $request->study_program_id,
+                'divisi_id' => $divisiId,
+                'study_program_id' => null,
+                'nama_prodi' => $namaProdi,
                 'tahun' => $tahun,
                 'tanggal_dokumen' => $request->tanggal_dokumen ?: now()->toDateString(),
                 'tanggal_diterima' => $request->tanggal_diterima ?: now()->toDateString(),
@@ -168,9 +213,9 @@ class ArsipService
         return [
             'arsip' => $arsip->load(['divisi', 'kategori', 'studyProgram']),
             'divisiTree' => $this->divisiTree($user->hasRole('Operator') || $user->hasRole('Staf TU')),
-            'kategoriTree' => $this->kategoriTree(),
-            'studyPrograms' => StudyProgram::orderBy('name')->get(),
-            'tahunList' => $this->tahunList(),
+            'kategoriTree' => MasterData::kategoriTree(),
+            'studyPrograms' => MasterData::studyPrograms(),
+            'tahunList' => MasterData::tahunList(),
         ];
     }
 
@@ -179,14 +224,23 @@ class ArsipService
      */
     public function updateArchive(Request $request, Arsip $arsip): void
     {
+        $user = $request->user();
+        $divisiId = $request->divisi_id;
+        if (! $divisiId && ! $user->hasRole('Admin') && ! $user->hasRole('Superadmin')) {
+            $divisiId = $user->divisi_id ?: $arsip->divisi_id;
+        }
+
+        $namaProdi = $request->boolean('tanpa_prodi') ? null : ($request->nama_prodi ?: null);
+
         $data = [
             'nomor_arsip' => $request->nomor_arsip,
             'nomor_surat' => $request->nomor_surat,
             'judul' => $request->judul,
             'deskripsi' => $request->deskripsi,
             'kategori_id' => $request->kategori_id,
-            'divisi_id' => $request->divisi_id,
-            'study_program_id' => $request->study_program_id,
+            'divisi_id' => $divisiId,
+            'study_program_id' => null,
+            'nama_prodi' => $namaProdi,
             'tahun' => $request->tahun ?: now()->year,
             'tanggal_dokumen' => $request->tanggal_dokumen,
             'tanggal_diterima' => $request->tanggal_diterima,
@@ -262,14 +316,20 @@ class ArsipService
     public function forceDeleteArchive($id): void
     {
         $arsip = Arsip::onlyTrashed()->findOrFail($id);
+        $disk = Storage::disk('local');
 
-        if (Storage::disk('local')->exists($arsip->file_path)) {
-            Storage::disk('local')->delete($arsip->file_path);
-        }
+        $paths = array_filter([
+            $arsip->file_path,
+            $arsip->file_path_excel,
+        ]);
 
         foreach ($arsip->versions as $version) {
-            if (Storage::disk('local')->exists($version->file_path)) {
-                Storage::disk('local')->delete($version->file_path);
+            $paths[] = $version->file_path;
+        }
+
+        foreach (array_unique($paths) as $path) {
+            if ($disk->exists($path)) {
+                $disk->delete($path);
             }
         }
 
@@ -332,53 +392,21 @@ class ArsipService
 
     /**
      * Check if a user is authorized to read/download a specific archive file.
+     *
+     * Delegates to AksesDokumen so the list, the download guard and the request
+     * workflow all agree on one rule set.
      */
     public function canAccessFile(Arsip $arsip, User $user): bool
     {
-        if ($user->hasRole('Admin') || $user->hasRole('Superadmin')) {
-            return true;
-        }
-
-        if ($arsip->status_publikasi === 'Internal') {
-            return true;
-        }
-
-        if ($arsip->uploader_id == $user->id) {
-            return true;
-        }
-
-        $hasActiveApproval = Peminjaman::where('arsip_id', $arsip->id)
-            ->where('user_id', $user->id)
-            ->where('status_approval', 'Approved')
-            ->exists();
-
-        if ($hasActiveApproval) {
-            return true;
-        }
-
-        return false;
+        return AksesDokumen::canAccess($arsip, $user);
     }
 
     /**
-     * Build nested kategori tree for dropdowns & tree navigation.
+     * Alias method for canAccessFile to satisfy canUserAccessArsip requirement.
      */
-    private function kategoriTree(): array
+    public function canUserAccessArsip(Arsip $arsip, User $user): bool
     {
-        return KategoriArsip::whereNull('parent_id')
-            ->with(['children' => fn ($q) => $q->orderBy('name')])
-            ->orderBy('name')
-            ->get()
-            ->map(fn ($k) => [
-                'id' => $k->id,
-                'name' => $k->name,
-                'kode' => $k->kode,
-                'children' => $k->children->map(fn ($c) => [
-                    'id' => $c->id,
-                    'name' => $c->name,
-                    'kode' => $c->kode,
-                ])->all(),
-            ])
-            ->all();
+        return $this->canAccessFile($arsip, $user);
     }
 
     /**
@@ -386,62 +414,33 @@ class ArsipService
      */
     private function divisiTree(bool $selfOnly = false): array
     {
-        if ($selfOnly) {
-            $user = auth()->user();
-
-            return Divisi::where('id', $user->divisi_id)->get()->map(fn ($d) => [
-                'id' => $d->id,
-                'name' => $d->name,
-                'kode' => $d->kode,
-                'children' => [],
-            ])->all();
+        if (! $selfOnly) {
+            return MasterData::divisiTree();
         }
 
-        $fakultas = Divisi::with('children')->whereNull('parent_id')->orderBy('name')->get();
-        $orgUnits = Divisi::whereNull('parent_id')->whereNull('kode')->orderBy('name')->get();
+        $user = auth()->user();
 
-        $map = fn ($d) => [
+        return Divisi::where('id', $user->divisi_id)->get()->map(fn ($d) => [
             'id' => $d->id,
             'name' => $d->name,
             'kode' => $d->kode,
-            'children' => ($d->children ?? collect())->map(fn ($c) => [
-                'id' => $c->id,
-                'name' => $c->name,
-                'kode' => $c->kode,
-                'children' => [],
-            ])->all(),
-        ];
-
-        return collect($fakultas)->map($map)
-            ->concat($orgUnits->map($map))
-            ->values()
-            ->all();
-    }
-
-    /**
-     * List of years from current year down to 1970 + DB years.
-     */
-    private function tahunList(): array
-    {
-        $currentYear = (int) date('Y');
-        $years = range($currentYear, 1970);
-
-        $dbYears = Arsip::whereNotNull('tahun')
-            ->distinct()
-            ->pluck('tahun')
-            ->map(fn ($t) => (int) $t)
-            ->all();
-
-        return collect($years)->merge($dbYears)->unique()->sortDesc()->values()->all();
+            'children' => [],
+        ])->all();
     }
 
     /**
      * Generate a unique auto nomor_arsip (ARS-{KODE}-{tahun}-{random}).
      */
-    private function generateNomorArsip($divisiId, $tahun): string
+    private function generateNomorArsip($divisiId, $tahun, $studyProgramId = null): string
     {
-        $divisi = Divisi::find($divisiId);
-        $kode = $divisi?->kode ?: 'ARS';
+        $kode = 'ARS';
+        if ($divisiId) {
+            $divisi = Divisi::find($divisiId);
+            $kode = $divisi?->kode ?: 'ARS';
+        } elseif ($studyProgramId) {
+            $prodi = StudyProgram::find($studyProgramId);
+            $kode = $prodi?->kode ?: 'PRODI';
+        }
 
         do {
             $nomor = 'ARS-'.strtoupper($kode).'-'.$tahun.'-'.strtoupper(Str::random(6));

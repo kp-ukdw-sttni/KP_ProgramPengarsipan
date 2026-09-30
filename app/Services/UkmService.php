@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\Divisi;
 use App\Models\Ukm;
 use App\Models\UkmAnggota;
+use App\Support\MasterData;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -21,7 +21,7 @@ class UkmService
                 ->orderBy('name')
                 ->paginate(10)
                 ->withQueryString(),
-            'divisi' => Divisi::orderBy('name')->get(['id', 'name', 'kode']),
+            'divisi' => MasterData::divisiOptions(),
         ];
     }
 
@@ -31,7 +31,7 @@ class UkmService
     public function getCreateData(): array
     {
         return [
-            'divisi' => Divisi::orderBy('name')->get(['id', 'name', 'kode']),
+            'divisi' => MasterData::divisiOptions(),
         ];
     }
 
@@ -42,7 +42,7 @@ class UkmService
     {
         return [
             'ukm' => $ukm->load(['divisi', 'anggota']),
-            'divisi' => Divisi::orderBy('name')->get(['id', 'name', 'kode']),
+            'divisi' => MasterData::divisiOptions(),
         ];
     }
 

@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Models\AuditLog;
-use App\Models\Divisi;
 use App\Models\User;
+use App\Support\MasterData;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -24,7 +24,7 @@ class UserService
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('nik_nim', 'like', "%{$search}%");
+                    ->orWhere('nidn_nip', 'like', "%{$search}%");
             });
         }
 
@@ -39,7 +39,7 @@ class UserService
         return [
             'users' => $query->latest()->paginate(15)->withQueryString(),
             'roles' => Role::all(),
-            'divisi' => Divisi::all(),
+            'divisi' => MasterData::divisi(),
             'filters' => $request->only(['search', 'role', 'status_akun']),
         ];
     }
@@ -51,7 +51,7 @@ class UserService
     {
         return [
             'roles' => Role::all(),
-            'divisi' => Divisi::all(),
+            'divisi' => MasterData::divisi(),
         ];
     }
 
@@ -62,7 +62,7 @@ class UserService
     {
         $user = User::create([
             'name' => $data['name'],
-            'nik_nim' => $data['nik_nim'] ?? null,
+            'nidn_nip' => $data['nidn_nip'] ?? null,
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
             'divisi_id' => $data['divisi_id'] ?? null,
@@ -100,7 +100,7 @@ class UserService
     {
         $updateData = [
             'name' => $data['name'],
-            'nik_nim' => $data['nik_nim'] ?? null,
+            'nidn_nip' => $data['nidn_nip'] ?? null,
             'email' => $data['email'],
             'divisi_id' => $data['divisi_id'] ?? null,
             'status_akun' => $data['status_akun'],
@@ -159,7 +159,7 @@ class UserService
 
     /**
      * Import users in bulk from a CSV file.
-     * Expected CSV columns: name, nik_nim, email, password, divisi_id, role
+     * Expected CSV columns: name, nidn_nip, email, password, divisi_id, role
      */
     public function importCsv(Request $request): string
     {
@@ -195,7 +195,7 @@ class UserService
 
             $user = User::create([
                 'name' => $data['name'],
-                'nik_nim' => $data['nik_nim'] ?? null,
+                'nidn_nip' => $data['nidn_nip'] ?? null,
                 'email' => $data['email'],
                 'password' => Hash::make($data['password']),
                 'divisi_id' => ! empty($data['divisi_id']) ? $data['divisi_id'] : null,

@@ -10,11 +10,11 @@ const props = defineProps({
 </script>
 
 <template>
-    <div class="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-gray-50 via-gray-100 to-blue-50/40 p-4 sm:p-6">
+    <div class="flex min-h-screen flex-col items-center justify-center bg-gray-100 p-4 sm:p-6">
         <!-- Auth Container Card -->
-        <div class="w-full max-w-md rounded-2xl border border-gray-200/60 bg-white p-8 shadow-xl shadow-blue-900/5 relative overflow-hidden">
-            <!-- Top Gradient Accent -->
-            <div class="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700"></div>
+        <div class="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 shadow-xl shadow-blue-900/5 relative overflow-hidden">
+            <!-- Top Accent -->
+            <div class="absolute top-0 inset-x-0 h-1.5 bg-blue-600"></div>
 
             <!-- Brand Header -->
             <div class="mb-8 text-center">
@@ -27,10 +27,5 @@ const props = defineProps({
 
             <slot />
         </div>
-
-        <!-- Back to Home Link -->
-        <a :href="route('dashboard')" class="mt-6 inline-flex items-center text-xs font-semibold text-gray-500 hover:text-indigo-600 transition">
-            &larr; Kembali ke Beranda
-        </a>
     </div>
 </template>

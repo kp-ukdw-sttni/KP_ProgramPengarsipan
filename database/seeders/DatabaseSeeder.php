@@ -26,9 +26,13 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // 1. Seed Roles (Peran Pengguna Murni Internal Kampus)
+        // Admin/Superadmin memverifikasi arsip, Sie Kesiswaan mengisi presensi UKM,
+        // Dosen memakai portal untuk upload dokumen.
         $roles = [
             'Admin',
+            'Superadmin',
             'Dosen',
+            'Sie Kesiswaan',
         ];
         foreach ($roles as $roleName) {
             Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
@@ -50,22 +54,63 @@ class DatabaseSeeder extends Seeder
         // 3. Seed Master Data Unit Kerja (Divisi/Bagian Administrasi & Struktural)
         // PENTING: Unit Kerja HANYA berisi unit administrasi/struktural.
         // Nama Program Studi (Prodi) TIDAK dimasukkan di sini — lihat tabel study_programs.
+        // Struktur mengikuti pembagian Wakil Ketua I-IV, Perpus, dan LPM yang
+        // berlaku di STTNI: 2 tingkat, karena MasterData::divisiTree() hanya
+        // merender parent + anak.
+        // CATATAN KODE: 'KMS' masih dipakai literal di
+        // resources/js/Layouts/AuthenticatedLayout.vue untuk canPresensi, jadi kode
+        // lama dipertahankan walaupun nama layarnya sudah berubah.
         $departments = [
             ['kode' => 'PIMP',   'name' => 'Pimpinan / Rektorat / Ketua STT'],
-            ['kode' => 'BAAK',   'name' => 'BAAK (Bagian Administrasi Akademik & Kemahasiswaan)'],
-            ['kode' => 'BAUK',   'name' => 'BAUK (Bagian Administrasi Umum & Keuangan)'],
-            ['kode' => 'KMS',    'name' => 'Bagian Kemahasiswaan & Pelayanan Mahasiswa'],
+            [
+                'kode' => 'BAAK', 'name' => 'WK I Akademik',
+                'children' => [
+                    ['kode' => 'KAPRODI-TEOL',  'name' => 'Kaprodi Teologi'],
+                    ['kode' => 'KAPRODI-PAK',    'name' => 'Kaprodi PAK'],
+                    ['kode' => 'KAPRODI-MTEOL',  'name' => 'Kaprodi Magister Teologi'],
+                ],
+            ],
+            [
+                'kode' => 'BAUK', 'name' => 'WK II Keu-Sar-Peg',
+                'children' => [
+                    ['kode' => 'KASUB-ADMAK', 'name' => 'Ka Sub Bid Administrasi Akademik'],
+                    ['kode' => 'KASUB-KEU',   'name' => 'Ka Sub Bid Keuangan'],
+                    ['kode' => 'KASUB-UMUM',  'name' => 'Ka Sub Bid Umum'],
+                ],
+            ],
+            [
+                'kode' => 'KMS', 'name' => 'WK III Kemahasiswaan dan Alumni',
+                'children' => [
+                    ['kode' => 'KASUB-KEM',  'name' => 'Ka Sub Bid Kemahasiswaan'],
+                    ['kode' => 'KASUB-ALUM', 'name' => 'Ka Sub Bid Alumni'],
+                ],
+            ],
+            [
+                'kode' => 'WKIV', 'name' => 'WK IV Kerjasama Eksternal',
+                'children' => [
+                    ['kode' => 'KASUB-KERJASAMA',  'name' => 'Ka Sub Bid Kerjasama dan Pengembangan'],
+                    ['kode' => 'KASUB-PENDIDIKAN', 'name' => 'Ka Sub Bid Pendidikan Berkelanjutan'],
+                ],
+            ],
             ['kode' => 'LPM',    'name' => 'LPM (Lembaga Penjaminan Mutu)'],
             ['kode' => 'LPPM',   'name' => 'LPPM (Lembaga Penelitian & Pengabdian Masyarakat)'],
-            ['kode' => 'PERPUS', 'name' => 'Perpustakaan & Sumber Pustaka'],
+            ['kode' => 'PERPUS', 'name' => 'Unit Perpustakaan'],
         ];
         $divisiIds = [];
         foreach ($departments as $dept) {
-            $divisi = Divisi::firstOrCreate(
+            $divisi = Divisi::updateOrCreate(
                 ['kode' => $dept['kode']],
-                ['name' => $dept['name']]
+                ['name' => $dept['name'], 'parent_id' => null]
             );
             $divisiIds[$dept['kode']] = $divisi->id;
+
+            foreach ($dept['children'] ?? [] as $child) {
+                $childDivisi = Divisi::updateOrCreate(
+                    ['kode' => $child['kode']],
+                    ['name' => $child['name'], 'parent_id' => $divisi->id]
+                );
+                $divisiIds[$child['kode']] = $childDivisi->id;
+            }
         }
 
         // 4. Seed Master Data Jenis Dokumen (Kategori Dokumen)
@@ -132,13 +177,16 @@ class DatabaseSeeder extends Seeder
         }
 
         // 5. Seed Users (Admin & Dosen / Staf Internal)
+        // Nama akun mengikuti struktur leadership STTNI (Wakil Ketua & Kaprodi).
+        // Email tetap memakai pola lama karena alamat email asli tidak tersedia;
+        // nidn_nip dikosongkan karena DSN-xxx/STF-xxx hanya placeholder, bukan NIP.
         $admin = User::updateOrCreate(
             ['email' => 'admin@sttni.ac.id'],
             [
                 'name' => 'Administrator Pengarsipan',
                 'password' => Hash::make('admin123'),
                 'divisi_id' => $divisiIds['PIMP'],
-                'nik_nim' => 'ADM-001',
+                'nidn_nip' => null,
                 'status_akun' => 'Aktif',
             ]
         );
@@ -147,10 +195,10 @@ class DatabaseSeeder extends Seeder
         $dosenKemahasiswaan = User::updateOrCreate(
             ['email' => 'dosen.kemahasiswaan@sttni.ac.id'],
             [
-                'name' => 'Pdt. Samuel Hendra, M.Th. (Kemahasiswaan)',
+                'name' => 'Sapto Sunariyanti, M.Th.',
                 'password' => Hash::make('dosen123'),
-                'divisi_id' => $divisiIds['KMS'],
-                'nik_nim' => 'DSN-003',
+                'divisi_id' => $divisiIds['KMS'], // Ketua WK III Kemahasiswaan dan Alumni
+                'nidn_nip' => null,
                 'status_akun' => 'Aktif',
             ]
         );
@@ -159,10 +207,10 @@ class DatabaseSeeder extends Seeder
         $dosen1 = User::updateOrCreate(
             ['email' => 'dosen.teologi@sttni.ac.id'],
             [
-                'name'        => 'Dr. Stefanus Kristianto, M.Th.',
+                'name'        => 'Darmanto, M.Th.',
                 'password'    => Hash::make('dosen123'),
-                'divisi_id'   => $divisiIds['BAAK'], // Dosen — unit administrasi akademik
-                'nik_nim'     => 'DSN-001',
+                'divisi_id'   => $divisiIds['KAPRODI-TEOL'],
+                'nidn_nip'     => null,
                 'status_akun' => 'Aktif',
             ]
         );
@@ -171,10 +219,10 @@ class DatabaseSeeder extends Seeder
         $dosen2 = User::updateOrCreate(
             ['email' => 'dosen.pak@sttni.ac.id'],
             [
-                'name'        => 'Dr. Maria Natalia, M.Pd.K.',
+                'name'        => 'Dr. Ramses Simanjuntak, M.Pd.K.',
                 'password'    => Hash::make('dosen123'),
-                'divisi_id'   => $divisiIds['BAAK'], // Dosen — unit administrasi akademik
-                'nik_nim'     => 'DSN-002',
+                'divisi_id'   => $divisiIds['KAPRODI-PAK'],
+                'nidn_nip'     => null,
                 'status_akun' => 'Aktif',
             ]
         );
@@ -183,14 +231,41 @@ class DatabaseSeeder extends Seeder
         $stafInternal = User::updateOrCreate(
             ['email' => 'staf.akademik@sttni.ac.id'],
             [
-                'name' => 'Rina Wijaya, S.Kom. (Staf BAAK)',
+                'name' => 'Dr. Janwardi, MA, M.Mis.',
                 'password' => Hash::make('dosen123'),
-                'divisi_id' => $divisiIds['BAAK'],
-                'nik_nim' => 'STF-001',
+                'divisi_id' => $divisiIds['KAPRODI-MTEOL'],
+                'nidn_nip' => null,
                 'status_akun' => 'Aktif',
             ]
         );
         $stafInternal->syncRoles(['Dosen']);
+
+        // Sie Kesiswaan mengisi presensi UKM. Ditaruh di KMS (WK III
+        // Kemahasiswaan dan Alumni) karena kesiswaan berada di bawah bidang ini.
+        $sieKesiswaan = User::updateOrCreate(
+            ['email' => 'kesiswaan@sttni.ac.id'],
+            [
+                'name' => 'Sie Kesiswaan STTNI',
+                'password' => Hash::make('kesiswaan123'),
+                'divisi_id' => $divisiIds['KMS'],
+                'nidn_nip' => null,
+                'status_akun' => 'Aktif',
+            ]
+        );
+        $sieKesiswaan->syncRoles(['Sie Kesiswaan']);
+
+        // Superadmin memverifikasi arsip hasil rekap presensi sebelum disimpan final.
+        $superadmin = User::updateOrCreate(
+            ['email' => 'superadmin@sttni.ac.id'],
+            [
+                'name' => 'Super Administrator Pengarsipan',
+                'password' => Hash::make('superadmin123'),
+                'divisi_id' => $divisiIds['PIMP'],
+                'nidn_nip' => null,
+                'status_akun' => 'Aktif',
+            ]
+        );
+        $superadmin->syncRoles(['Superadmin']);
 
         // 6. Seed Master Data UKM & Anggota untuk Presensi (Berkebun, Futsal, Musik)
         $ukmBerkebun = Ukm::firstOrCreate(

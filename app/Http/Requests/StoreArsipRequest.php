@@ -28,9 +28,10 @@ class StoreArsipRequest extends FormRequest
             'judul'             => ['required', 'array', 'min:1', 'max:10'],
             'judul.*'           => ['required', 'string', 'max:255'],
             'kategori_id'       => ['required', 'exists:kategori_arsip,id'],
-            'divisi_id'         => ['required', 'exists:divisi,id'],
-            // study_program_id: validated conditionally in withValidator()
-            'study_program_id'  => ['nullable', 'exists:study_programs,id'],
+            'divisi_id'         => ['nullable', 'exists:divisi,id'],
+            'tanpa_divisi'      => ['nullable', 'boolean'],
+            'nama_prodi'        => ['nullable', 'string', 'max:255'],
+            'tanpa_prodi'       => ['nullable', 'boolean'],
             'status_publikasi'  => ['required', 'string', 'in:Internal,Confidential'],
             'tanggal_dokumen'   => ['required', 'date'],
             // nomor_surat: validated conditionally in withValidator()
@@ -49,17 +50,28 @@ class StoreArsipRequest extends FormRequest
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
-            $kode = $this->getKategoriKode();
+            $user = auth()->user();
+            $isAdmin = $user && ($user->hasRole('Admin') || $user->hasRole('Superadmin'));
 
-            // ── Kelompok A Mandatory: Program Studi wajib ─────────────────────────
-            // Kode: RPS, MODUL, YUDISIUM, TA, AKRED
-            $kelompokAMandatory = ['RPS', 'MODUL', 'YUDISIUM', 'TA', 'AKRED'];
-            if (in_array($kode, $kelompokAMandatory) && ! $this->study_program_id) {
+            // Admin wajib memilih divisi_id jika:
+            // - Tidak mencentang "Tanpa Unit Kerja" (tanpa_divisi = false)
+            // - Dan juga mencentang "Tanpa Program Studi" (tanpa_prodi = true)
+            if ($isAdmin && ! $this->boolean('tanpa_divisi') && ! $this->divisi_id && $this->boolean('tanpa_prodi')) {
                 $validator->errors()->add(
-                    'study_program_id',
-                    'Program Studi wajib dipilih untuk jenis dokumen "'.$kode.'".'
+                    'divisi_id',
+                    'Unit Kerja wajib dipilih untuk akun Administrator jika bukan dokumen Program Studi.'
                 );
             }
+
+            // Jika "Tanpa Program Studi" TIDAK dicentang, maka nama_prodi wajib diisi
+            if (! $this->boolean('tanpa_prodi') && ! $this->nama_prodi) {
+                $validator->errors()->add(
+                    'nama_prodi',
+                    'Nama Program Studi wajib diisi jika tidak mencentang "Tanpa Program Studi".'
+                );
+            }
+
+            $kode = $this->getKategoriKode();
 
             // ── Kelompok B: Nomor Surat wajib (kecuali "Tanpa Nomor Surat") ───────
             // Kode: SM-MASUK, SM-KELUAR, SK, KERJASAMA, SOP, AKRED, YUDISIUM
@@ -101,19 +113,18 @@ class StoreArsipRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'files.required'       => 'Minimal satu berkas harus diunggah.',
-            'files.max'            => 'Maksimum 10 berkas dapat diunggah sekaligus.',
-            'files.*.mimes'        => 'Format berkas yang diizinkan: PDF, DOCX, XLSX, PPTX.',
-            'files.*.max'          => 'Ukuran setiap berkas maksimal 25 MB.',
-            'judul.*.required'     => 'Judul untuk setiap berkas harus diisi.',
-            'kategori_id.required' => 'Jenis Dokumen harus dipilih.',
-            'kategori_id.exists'   => 'Jenis Dokumen yang dipilih tidak valid.',
-            'divisi_id.required'   => 'Unit Kerja harus dipilih.',
-            'divisi_id.exists'     => 'Unit Kerja yang dipilih tidak valid.',
-            'study_program_id.exists' => 'Program Studi yang dipilih tidak valid.',
-            'status_publikasi.required' => 'Tingkat Akses harus dipilih.',
-            'tanggal_dokumen.required'  => 'Tanggal Dokumen harus diisi.',
-            'tanggal_dokumen.date'      => 'Format Tanggal Dokumen tidak valid.',
+            'files.required'                => 'Minimal satu berkas harus diunggah.',
+            'files.max'                     => 'Maksimum 10 berkas dapat diunggah sekaligus.',
+            'files.*.mimes'                 => 'Format berkas yang diizinkan: PDF, DOCX, XLSX, PPTX.',
+            'files.*.max'                   => 'Ukuran setiap berkas maksimal 25 MB.',
+            'judul.*.required'              => 'Judul untuk setiap berkas harus diisi.',
+            'kategori_id.required'          => 'Jenis Dokumen harus dipilih.',
+            'kategori_id.exists'            => 'Jenis Dokumen yang dipilih tidak valid.',
+            'divisi_id.exists'              => 'Unit Kerja yang dipilih tidak valid.',
+            'nama_prodi.max'                => 'Nama Program Studi maksimal 255 karakter.',
+            'status_publikasi.required'     => 'Tingkat Akses harus dipilih.',
+            'tanggal_dokumen.required'      => 'Tanggal Dokumen harus diisi.',
+            'tanggal_dokumen.date'          => 'Format Tanggal Dokumen tidak valid.',
         ];
     }
 }

@@ -20,6 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
             'check.status' => \App\Http\Middleware\CheckAccountStatus::class,
+            'presensi.access' => \App\Http\Middleware\EnsurePresensiAccess::class,
+            'presensi.review' => \App\Http\Middleware\EnsurePresensiAccess::class.':review',
+            'akses.approve' => \App\Http\Middleware\EnsureAccessApproval::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

@@ -24,7 +24,7 @@ class User extends Authenticatable
         'email',
         'password',
         'divisi_id',
-        'nik_nim',
+        'nidn_nip',
         'status_akun',
     ];
 

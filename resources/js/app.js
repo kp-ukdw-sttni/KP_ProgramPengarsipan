@@ -5,7 +5,6 @@ import { ZiggyVue } from 'ziggy-js';
 import LoadingOverlay from './Components/LoadingOverlay.vue';
 
 import '../css/app.css';
-import './bootstrap';
 
 const appName = window.document.documentElement.dataset.page || 'E-Archive STTNI';
 

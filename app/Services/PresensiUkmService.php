@@ -10,6 +10,7 @@ use App\Models\PresensiUkm;
 use App\Models\Ukm;
 use App\Models\UkmAnggota;
 use App\Models\User;
+use App\Support\PresensiAccess;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -36,12 +37,30 @@ class PresensiUkmService
             $query->where('ukm_id', $request->ukm_id);
         }
 
-        if ($user->hasRole('Sie Kesiswaan')) {
+        // A staff account inside WK III sees the whole unit's history, because
+        // presensi is a shared unit record. Everyone else who can only reach this
+        // page on the strength of the Sie Kesiswaan role sees just their own
+        // sessions — Admin/Superadmin are excluded because they supervise the
+        // archive, not because they are posted in another unit.
+        $hanyaMilikSendiri = ! PresensiAccess::isDalamBidangKemahasiswaan($user)
+            && ! $user->hasAnyRole(PresensiAccess::REVIEWER_ROLES);
+
+        if ($hanyaMilikSendiri) {
             $query->where('pengisi_id', $user->id);
         }
 
+        $paginator = $query->paginate(10)->withQueryString();
+
+        // Resolved server-side per row so the button can never drift from the
+        // destroy() guard, exactly like the arsip access flags.
+        $paginator->through(function (PresensiUkm $presensi) use ($user) {
+            $presensi->bisa_dihapus = $this->canDelete($presensi, $user);
+
+            return $presensi;
+        });
+
         return [
-            'presensi' => $query->paginate(10)->withQueryString(),
+            'presensi' => $paginator,
             'ukmList' => Ukm::orderBy('name')->get(['id', 'name']),
             'selectedUkmId' => $request?->ukm_id ?? '',
         ];
@@ -92,7 +111,10 @@ class PresensiUkmService
             'tanggal_kegiatan' => $tanggal,
             'pertemuan_ke' => $request->pertemuan_ke,
             'pengisi_id' => $user->id,
-            'status_arsip' => 'Terverifikasi',
+            // The archive is born pending: approve/reject is what flips it to
+            // Terverifikasi or Ditolak, so skipping that here would make the
+            // review queue unreachable.
+            'status_arsip' => 'Menunggu Verifikasi',
             'catatan_pengisi' => $request->catatan_pengisi,
         ]);
 
@@ -143,7 +165,7 @@ class PresensiUkmService
             'file_mime' => 'application/pdf',
             'retention_date' => now()->addYears(5)->toDateString(),
             'status' => 'Aktif',
-            'verification_status' => 'Terverifikasi',
+            'verification_status' => 'Menunggu Verifikasi',
             'status_publikasi' => 'Internal',
             'tags' => 'presensi, ukm, rekap, pertemuan-'.$presensi->pertemuan_ke,
             'uploader_id' => $user->id,
@@ -276,6 +298,50 @@ class PresensiUkmService
     }
 
     /**
+     * Whether the user may delete this session.
+     *
+     * Admin/Superadmin may remove any unverified session; the person who filled
+     * it in may remove only their own. A verified session is an official record,
+     * so it must be rejected first rather than deleted outright.
+     */
+    public function canDelete(PresensiUkm $presensi, User $user): bool
+    {
+        if ($presensi->status_arsip === 'Terverifikasi') {
+            return false;
+        }
+
+        return $user->hasAnyRole(PresensiAccess::REVIEWER_ROLES)
+            || $presensi->pengisi_id === $user->id;
+    }
+
+    /**
+     * Delete a session and send its generated rekap archive to the Recycle Bin.
+     *
+     * The rekap files stay on disk because the archive is only soft deleted, so
+     * an accidental delete can still be undone from the Recycle Bin.
+     */
+    public function delete(PresensiUkm $presensi, User $user): void
+    {
+        $arsip = $presensi->arsip;
+        $ukmName = $presensi->ukm?->name ?? 'UKM';
+        $tanggal = optional($presensi->tanggal_kegiatan)->format('d-m-Y') ?? '-';
+
+        AuditLog::create([
+            'user_id' => $user->id,
+            'action' => 'Delete',
+            'arsip_id' => $arsip?->id,
+            'ip_address' => request()->ip(),
+            'details' => "Menghapus data presensi '{$ukmName}' tanggal {$tanggal} beserta rincian kehadirannya.",
+        ]);
+
+        // Details cascade at the database level; the archive is handled
+        // separately so it follows the usual Recycle Bin flow.
+        $presensi->delete();
+
+        $arsip?->delete();
+    }
+
+    /**
      * Build the archive title.
      */
     private function buildJudul(PresensiUkm $presensi): string
@@ -342,7 +408,7 @@ class PresensiUkmService
      */
     private function generateExcel(array $rekap): string
     {
-        $spreadsheet = new Spreadsheet();
+        $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Rekap Presensi');
 

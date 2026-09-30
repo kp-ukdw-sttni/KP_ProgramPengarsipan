@@ -1,14 +1,14 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ArsipController;
+use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\KategoriController;
 use App\Http\Controllers\PeminjamanController;
-use App\Http\Controllers\AuditLogController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\UkmController;
 use App\Http\Controllers\PresensiUkmController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\UkmController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 // Redirect root to dashboard
@@ -53,6 +53,7 @@ Route::middleware(['auth', 'check.status'])->group(function () {
     Route::middleware(['role:Admin'])->group(function () {
         Route::get('/kategori', [KategoriController::class, 'index'])->name('kategori.index');
         Route::post('/kategori', [KategoriController::class, 'store'])->name('kategori.store');
+        Route::post('/kategori/{kategori}/sub-kategori', [KategoriController::class, 'storeChildren'])->name('kategori.children.store');
         Route::get('/kategori/{kategori}/edit', [KategoriController::class, 'edit'])->name('kategori.edit');
         Route::put('/kategori/{kategori}', [KategoriController::class, 'update'])->name('kategori.update');
         Route::delete('/kategori/{kategori}', [KategoriController::class, 'destroy'])->name('kategori.destroy');
@@ -61,13 +62,14 @@ Route::middleware(['auth', 'check.status'])->group(function () {
     // ============================================================
     // PERSETUJUAN AKSES DOKUMEN (Access Approval Workflow)
     // ============================================================
+    // Setiap pengguna login boleh mengajukan & membatalkan permintaannya sendiri.
     Route::post('/akses-dokumen/{arsip}/request', [PeminjamanController::class, 'requestAccess'])->name('peminjaman.request');
-    Route::delete('/akses-dokumen/{peminjaman}/cancel', [PeminjamanController::class, 'cancelRequest'])->name('peminjaman.cancel');
 
-    Route::middleware(['role:Admin'])->group(function () {
-        Route::get('/akses-dokumen', [PeminjamanController::class, 'manage'])->name('peminjaman.manage');
+    Route::middleware(['akses.approve'])->group(function () {
+        Route::get('/akses-dokumen/kelola', [PeminjamanController::class, 'manage'])->name('peminjaman.manage');
         Route::post('/akses-dokumen/{peminjaman}/approve', [PeminjamanController::class, 'approve'])->name('peminjaman.approve');
         Route::post('/akses-dokumen/{peminjaman}/reject', [PeminjamanController::class, 'reject'])->name('peminjaman.reject');
+        Route::post('/akses-dokumen/{peminjaman}/revoke', [PeminjamanController::class, 'revoke'])->name('peminjaman.revoke');
     });
 
     // ============================================================
@@ -95,19 +97,26 @@ Route::middleware(['auth', 'check.status'])->group(function () {
     Route::put('/ukm/{ukm}/anggota/{anggota}', [UkmController::class, 'updateAnggota'])->name('ukm.anggota.update');
     Route::delete('/ukm/{ukm}/anggota/{anggota}', [UkmController::class, 'destroyAnggota'])->name('ukm.anggota.destroy');
 
-    Route::get('/presensi', [PresensiUkmController::class, 'index'])->name('presensi.index');
-    Route::get('/presensi/create', [PresensiUkmController::class, 'create'])->name('presensi.create');
-    Route::post('/presensi', [PresensiUkmController::class, 'store'])->name('presensi.store');
-    Route::get('/presensi/review', [PresensiUkmController::class, 'review'])->name('presensi.review');
-    Route::get('/presensi/anggota/{ukm}', [PresensiUkmController::class, 'anggotaByUkm'])->name('presensi.anggota');
-    Route::get('/presensi/{presensi}', [PresensiUkmController::class, 'show'])->name('presensi.show');
-    Route::get('/presensi/{presensi}/pdf', [PresensiUkmController::class, 'downloadPdf'])->name('presensi.pdf');
-    Route::get('/presensi/{presensi}/excel', [PresensiUkmController::class, 'downloadExcel'])->name('presensi.excel');
-
-    // Finalisasi & Verifikasi Presensi
-    Route::middleware(['role:Admin'])->group(function () {
+    // Verifikasi hanya untuk pengelola arsip, bukan pengisi presensi.
+    // /presensi/review harus didaftarkan sebelum /presensi/{presensi},
+    // kalau tidak literal "review" akan ditangkap oleh route parameter.
+    Route::middleware(['presensi.review'])->group(function () {
+        Route::get('/presensi/review', [PresensiUkmController::class, 'review'])->name('presensi.review');
         Route::post('/presensi/{presensi}/approve', [PresensiUkmController::class, 'approve'])->name('presensi.approve');
         Route::post('/presensi/{presensi}/reject', [PresensiUkmController::class, 'reject'])->name('presensi.reject');
+    });
+
+    // Mengisi presensi milik WK III Kemahasiswaan dan Alumni beserta seluruh
+    // sub-unit di bawahnya, tanpa harus menunggu role diberikan manual.
+    Route::middleware(['presensi.access'])->group(function () {
+        Route::get('/presensi', [PresensiUkmController::class, 'index'])->name('presensi.index');
+        Route::get('/presensi/create', [PresensiUkmController::class, 'create'])->name('presensi.create');
+        Route::post('/presensi', [PresensiUkmController::class, 'store'])->name('presensi.store');
+        Route::get('/presensi/anggota/{ukm}', [PresensiUkmController::class, 'anggotaByUkm'])->name('presensi.anggota');
+        Route::get('/presensi/{presensi}', [PresensiUkmController::class, 'show'])->name('presensi.show');
+        Route::delete('/presensi/{presensi}', [PresensiUkmController::class, 'destroy'])->name('presensi.destroy');
+        Route::get('/presensi/{presensi}/pdf', [PresensiUkmController::class, 'downloadPdf'])->name('presensi.pdf');
+        Route::get('/presensi/{presensi}/excel', [PresensiUkmController::class, 'downloadExcel'])->name('presensi.excel');
     });
 
     // ============================================================

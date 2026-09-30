@@ -1,9 +1,13 @@
 <script setup>
+import { ref } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '../../Layouts/AuthenticatedLayout.vue'
 import FlashMessages from '../../Components/ui/FlashMessages.vue'
+import Modal from '../../Components/ui/Modal.vue'
 import PageHero from '../../Components/ui/PageHero.vue'
 import Pagination from '../../Components/ui/Pagination.vue'
+import SecondaryButton from '../../Components/ui/SecondaryButton.vue'
+import DangerButton from '../../Components/ui/DangerButton.vue'
 import { useRoute } from '../../Composables/useRoute'
 import { useAuth } from '../../Composables/useAuth'
 
@@ -35,6 +39,25 @@ const filterByUkm = (id) => {
 
 const openPdf = (id) => window.open(routeFn('presensi.pdf', { presensi: id }), '_blank')
 const openExcel = (id) => window.open(routeFn('presensi.excel', { presensi: id }), '_blank')
+
+const deleteTarget = ref(null)
+const deleting = ref(false)
+
+const confirmDelete = (presensi) => {
+    deleteTarget.value = presensi
+}
+
+const performDelete = () => {
+    if (!deleteTarget.value) return
+    deleting.value = true
+    router.delete(routeFn('presensi.destroy', { presensi: deleteTarget.value.id }), {
+        preserveScroll: true,
+        onFinish: () => {
+            deleting.value = false
+            deleteTarget.value = null
+        },
+    })
+}
 </script>
 
 <template>
@@ -49,7 +72,7 @@ const openExcel = (id) => window.open(routeFn('presensi.excel', { presensi: id }
             <template #actions>
                 <Link
                     :href="routeFn('presensi.create')"
-                    class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-gold to-yellow-500 px-4 py-2.5 text-sm font-bold text-navy shadow-lg transition hover:scale-105"
+                    class="inline-flex items-center gap-2 rounded-xl bg-gold px-4 py-2.5 text-sm font-bold text-navy shadow-lg transition hover:bg-gold-light"
                 >
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -128,6 +151,15 @@ const openExcel = (id) => window.open(routeFn('presensi.excel', { presensi: id }
                                     >
                                         Excel
                                     </button>
+                                    <button
+                                        v-if="p.bisa_dihapus"
+                                        type="button"
+                                        title="Hapus presensi ini"
+                                        class="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50"
+                                        @click="confirmDelete(p)"
+                                    >
+                                        Hapus
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -146,5 +178,32 @@ const openExcel = (id) => window.open(routeFn('presensi.excel', { presensi: id }
         </div>
 
         <Pagination :links="presensi.links" />
+
+        <Modal :show="!!deleteTarget" max-width="sm" @close="deleteTarget = null">
+            <div v-if="deleteTarget" class="p-6">
+                <div class="flex items-start gap-4">
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-100">
+                        <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <h3 class="text-sm font-bold text-gray-900">Hapus presensi ini?</h3>
+                        <p class="mt-1 text-xs text-gray-500">
+                            Sesi <span class="font-semibold">{{ deleteTarget.ukm?.name }}</span>
+                            tanggal <span class="font-semibold">{{ deleteTarget.tanggal_kegiatan }}</span>
+                            beserta rincian kehadirannya akan dihapus. Arsip rekapnya dipindahkan ke Recycle Bin
+                            dan masih dapat dipulihkan dari sana.
+                        </p>
+                    </div>
+                </div>
+                <div class="mt-5 flex items-center justify-end gap-2">
+                    <SecondaryButton type="button" @click="deleteTarget = null">Batal</SecondaryButton>
+                    <DangerButton :disabled="deleting" @click="performDelete">
+                        {{ deleting ? 'Menghapus...' : 'Hapus Presensi' }}
+                    </DangerButton>
+                </div>
+            </div>
+        </Modal>
     </AuthenticatedLayout>
 </template>

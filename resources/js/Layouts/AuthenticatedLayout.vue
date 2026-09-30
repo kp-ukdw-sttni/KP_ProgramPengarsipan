@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
 import { Link, Head, router } from '@inertiajs/vue3'
 import { useAuth } from '../Composables/useAuth'
 import { useRoute } from '../Composables/useRoute'
@@ -7,7 +7,11 @@ import { useUploadModal } from '../Composables/useUploadModal'
 import { useSidebar } from '../Composables/useSidebar'
 import NavContent from './Partials/NavContent.vue'
 import UploadFeedback from '../Components/ui/UploadFeedback.vue'
-import ArsipUploadModal from '../Components/ArsipUploadModal.vue'
+
+// The upload form is a heavy component (~32 KB) but is only needed once the
+// user actually opens it, so keep it out of the chunk every page downloads.
+const loadUploadModal = () => import('../Components/ArsipUploadModal.vue')
+const ArsipUploadModal = defineAsyncComponent(loadUploadModal)
 
 const props = defineProps({
     title: {
@@ -28,6 +32,16 @@ const handleOpenUpload = () => {
     mobileMenuOpen.value = false
     openUploadModal()
 }
+
+// Warm the upload form once the browser is idle so the first click is instant,
+// without making every page load pay for it up front.
+onMounted(() => {
+    if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(loadUploadModal, { timeout: 3000 })
+    } else {
+        setTimeout(loadUploadModal, 2000)
+    }
+})
 
 const isActive = (...names) => names.some((name) => routeFn().current(name))
 
@@ -54,11 +68,12 @@ const canUpload = computed(() => true)
 const canApprove = computed(() => hasRole('Admin', 'Superadmin'))
 const canAdmin = computed(() => hasRole('Admin', 'Superadmin'))
 const canManageUsers = computed(() => hasRole('Admin', 'Superadmin'))
-const canPresensi = computed(() => {
-    if (hasRole('Admin', 'Superadmin')) return true
-    return user.value?.divisi?.kode === 'KMS' || user.value?.divisi_id === 3
-})
-const canReviewPresensi = computed(() => hasRole('Admin', 'Superadmin'))
+// Both flags are resolved on the server (PresensiAccess) so the sidebar and the
+// route guards can never disagree about who may open attendance.
+const canPresensi = computed(() => user.value?.can_presensi === true)
+const canReviewPresensi = computed(() => user.value?.can_review_presensi === true)
+// Same reasoning as the presensi flags: the queue link must match the guard.
+const canApproveAccess = computed(() => user.value?.can_approve_access === true)
 
 const logout = () => {
     router.post(routeFn('logout'))
@@ -89,6 +104,7 @@ const vClickOutside = {
             <NavContent
                 :can-upload="canUpload"
                 :can-approve="canApprove"
+        :can-approve-access="canApproveAccess"
                 :can-admin="canAdmin"
                 :can-manage-users="canManageUsers"
                 :can-presensi="canPresensi"
@@ -159,6 +175,7 @@ const vClickOutside = {
                     <NavContent
                         :can-upload="canUpload"
                         :can-approve="canApprove"
+        :can-approve-access="canApproveAccess"
                         :can-admin="canAdmin"
                         :can-manage-users="canManageUsers"
                         :can-presensi="canPresensi"
@@ -174,7 +191,7 @@ const vClickOutside = {
 
         <!-- Main Column -->
         <div class="flex min-w-0 flex-1 flex-col">
-            <div class="h-1 shrink-0 bg-gradient-to-r from-gold via-blue-600 to-navy" />
+            <div class="h-1 shrink-0 bg-navy" />
             <!-- Topbar -->
             <header class="shrink-0 border-b border-gray-200 bg-white px-4 py-3.5 sm:px-6 md:px-8">
                 <div class="flex items-center justify-between">
@@ -268,5 +285,5 @@ const vClickOutside = {
     </div>
 
     <UploadFeedback />
-    <ArsipUploadModal :show="uploadModal.open" @close="uploadModal.open = false" />
+    <ArsipUploadModal v-if="uploadModal.open" :show="uploadModal.open" @close="uploadModal.open = false" />
 </template>

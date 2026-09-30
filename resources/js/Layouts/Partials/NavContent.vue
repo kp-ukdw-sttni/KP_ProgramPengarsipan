@@ -12,6 +12,12 @@ defineProps({
         type: Boolean,
         default: false,
     },
+    // Gates the decision queue. Resolved server-side by AksesDokumen so it
+    // cannot drift from the `akses.approve` middleware.
+    canApproveAccess: {
+        type: Boolean,
+        default: false,
+    },
     canAdmin: {
         type: Boolean,
         default: false,
@@ -60,7 +66,7 @@ const navigate = () => emit('navigate')
     >
         <!-- Brand -->
         <div
-            class="flex h-16 shrink-0 items-center border-b border-white/10 bg-gradient-to-r from-gold/15 to-transparent"
+            class="flex h-16 shrink-0 items-center border-b border-white/10 bg-navy"
             :class="collapsed ? 'justify-center px-2' : 'px-7'"
         >
             <Link
@@ -85,7 +91,7 @@ const navigate = () => emit('navigate')
                 <button
                     v-if="collapsed"
                     type="button"
-                    class="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-lg shadow-blue-600/40 transition duration-200 hover:scale-105 hover:shadow-blue-600/60"
+                    class="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/40 transition duration-200 hover:scale-105 hover:bg-blue-700"
                     :title="'Unggah Berkas Baru'"
                     @click="emit('upload')"
                 >
@@ -96,10 +102,10 @@ const navigate = () => emit('navigate')
                 <button
                     v-else
                     type="button"
-                    class="group flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-gradient-to-br from-blue-600/25 via-blue-700/20 to-transparent py-3 pl-4 pr-3 text-left shadow-lg shadow-black/20 transition duration-200 hover:-translate-y-0.5 hover:border-blue-400/40 hover:from-blue-600/40 hover:shadow-blue-600/20"
+                    class="group flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-blue-600/25 py-3 pl-4 pr-3 text-left shadow-lg shadow-black/20 transition duration-200 hover:border-blue-400/40 hover:bg-blue-600/40"
                     @click="emit('upload')"
                 >
-                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-md shadow-blue-900/40">
+                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-900/40">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
                         </svg>
@@ -155,8 +161,8 @@ const navigate = () => emit('navigate')
                 </Link>
             </div>
 
-            <!-- Persetujuan Akses -->
-            <div v-if="canApprove" class="pt-5">
+            <!-- Persetujuan Akses: decision queue, gated by the server capability. -->
+            <div v-if="canApproveAccess" class="pt-5">
                 <div v-if="!collapsed" class="mb-2 flex items-center gap-3 px-3">
                     <span class="text-[10px] font-bold uppercase tracking-widest text-gray-500">Persetujuan Akses</span>
                     <span class="h-px flex-1 bg-white/10"></span>
@@ -252,6 +258,23 @@ const navigate = () => emit('navigate')
                         <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
                     </svg>
                     <span v-if="!collapsed">Kelola UKM &amp; Anggota</span>
+                </Link>
+
+                <Link
+                    v-if="canReviewPresensi"
+                    :href="routeFn('presensi.review')"
+                    :class="[
+                        itemClass(isActive('presensi.review')),
+                        collapsed ? 'mx-auto flex h-10 w-10 items-center justify-center px-0' : 'flex items-center gap-3 px-4 py-2.5',
+                    ]"
+                    class="rounded-xl text-sm font-medium transition-all"
+                    :title="collapsed ? 'Verifikasi Presensi' : undefined"
+                    @click="navigate"
+                >
+                    <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+                    </svg>
+                    <span v-if="!collapsed">Verifikasi Presensi</span>
                 </Link>
             </div>
 

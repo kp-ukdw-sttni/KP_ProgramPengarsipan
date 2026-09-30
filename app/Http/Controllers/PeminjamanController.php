@@ -14,45 +14,35 @@ class PeminjamanController extends Controller
     public function __construct(private PeminjamanService $peminjamanService) {}
 
     /**
-     * Display a listing of user's own borrowing requests.
-     */
-    public function index()
-    {
-        $user = Auth::user();
-
-        return Inertia::render('Peminjaman/Index', [
-            'peminjaman' => $this->peminjamanService->getIndexData($user),
-        ]);
-    }
-
-    /**
      * Handle request access action from Karyawan.
+     *
+     * The requester has no page of their own: the outcome is shown inline on
+     * the locked document in the arsip list, and the Admin decides from the
+     * Persetujuan Akses queue.
      */
     public function requestAccess(Arsip $arsip)
     {
         $result = $this->peminjamanService->requestAccess($arsip, Auth::user());
 
-        if ($result['target'] === 'back') {
-            return back()->with($result['success'] ? 'success' : 'error', $result['message']);
-        }
-
-        return redirect()->route('peminjaman.index')
-            ->with($result['success'] ? 'success' : 'error', $result['message']);
+        return back()->with($result['success'] ? 'success' : 'error', $result['message']);
     }
 
     /**
-     * Cancel a pending borrow request (only if status is Pending).
+     * Withdraw a permission that was granted earlier.
      */
-    public function cancelRequest(Peminjaman $peminjaman)
+    public function revoke(Request $request, Peminjaman $peminjaman)
     {
-        $result = $this->peminjamanService->cancelRequest($peminjaman, Auth::user());
+        $request->validate([
+            'notes' => ['required', 'string', 'max:500'],
+        ]);
 
-        return redirect()->route('peminjaman.index')
-            ->with($result['success'] ? 'success' : 'error', $result['message']);
+        $this->peminjamanService->cabut($request->only('notes'), $peminjaman, Auth::user());
+
+        return back()->with('success', 'Izin akses telah dicabut.');
     }
 
     /**
-     * Display listing of pending requests for Admin and Operator.
+     * Display listing of pending requests for Admin and Superadmin.
      */
     public function manage(Request $request)
     {
@@ -66,19 +56,15 @@ class PeminjamanController extends Controller
      */
     public function approve(Request $request, Peminjaman $peminjaman)
     {
-        $user = Auth::user();
-
-        if (($user->hasRole('Operator') || $user->hasRole('Staf TU')) && $peminjaman->arsip->divisi_id != $user->divisi_id) {
-            abort(403, 'Anda tidak diizinkan menyetujui permintaan dokumen dari divisi lain.');
-        }
+        abort_unless($peminjaman->status_approval === 'Pending', 422, 'Permintaan ini sudah diproses.');
 
         $request->validate([
-            'duration' => ['required', 'integer', 'min:1', 'max:168'],
+            'notes' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $this->peminjamanService->approve($request->only(['duration', 'notes']), $peminjaman, $user);
+        $this->peminjamanService->approve($request->only('notes'), $peminjaman, Auth::user());
 
-        return redirect()->route('peminjaman.manage')->with('success', 'Permintaan peminjaman berhasil disetujui.');
+        return back()->with('success', 'Permintaan akses disetujui. Pemohon sekarang dapat membuka dokumen ini.');
     }
 
     /**
@@ -86,18 +72,14 @@ class PeminjamanController extends Controller
      */
     public function reject(Request $request, Peminjaman $peminjaman)
     {
-        $user = Auth::user();
-
-        if (($user->hasRole('Operator') || $user->hasRole('Staf TU')) && $peminjaman->arsip->divisi_id != $user->divisi_id) {
-            abort(403, 'Anda tidak diizinkan menolak permintaan dokumen dari divisi lain.');
-        }
+        abort_unless($peminjaman->status_approval === 'Pending', 422, 'Permintaan ini sudah diproses.');
 
         $request->validate([
             'notes' => ['required', 'string', 'max:500'],
         ]);
 
-        $this->peminjamanService->reject($request->only(['notes']), $peminjaman, $user);
+        $this->peminjamanService->reject($request->only('notes'), $peminjaman, Auth::user());
 
-        return redirect()->route('peminjaman.manage')->with('success', 'Permintaan peminjaman telah ditolak.');
+        return back()->with('success', 'Permintaan akses ditolak.');
     }
 }

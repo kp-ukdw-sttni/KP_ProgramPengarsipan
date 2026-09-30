@@ -34,7 +34,7 @@ class UserController extends Controller
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'nik_nim' => ['nullable', 'string', 'max:50', 'unique:users,nik_nim'],
+            'nidn_nip' => ['nullable', 'string', 'max:50', 'unique:users,nidn_nip'],
             'email' => ['required', 'email', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'divisi_id' => ['nullable', 'exists:divisi,id'],
@@ -62,7 +62,7 @@ class UserController extends Controller
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'nik_nim' => ['nullable', 'string', 'max:50', 'unique:users,nik_nim,'.$user->id],
+            'nidn_nip' => ['nullable', 'string', 'max:50', 'unique:users,nidn_nip,'.$user->id],
             'email' => ['required', 'email', 'unique:users,email,'.$user->id],
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
             'divisi_id' => ['nullable', 'exists:divisi,id'],
@@ -88,7 +88,7 @@ class UserController extends Controller
 
     /**
      * Import users in bulk from a CSV file.
-     * Expected CSV columns: name, nik_nim, email, password, divisi_id, role
+     * Expected CSV columns: name, nidn_nip, email, password, divisi_id, role
      */
     public function importCsv(Request $request)
     {

@@ -104,15 +104,14 @@ const cards = computed(() => [
 
         <div class="space-y-6">
             <!-- Hero Banner -->
-            <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-navy via-navy-dark to-[#0A1120] p-6 text-white shadow-lg sm:p-8">
-                <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(212,175,55,0.18),transparent_55%)]"></div>
-                <div class="relative flex flex-wrap items-center justify-between gap-4">
+            <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
+                <div class="flex flex-wrap items-center justify-between gap-4">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wider text-gold-light">{{ today }}</p>
-                        <h2 class="mt-1.5 text-2xl font-extrabold sm:text-3xl">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-blue-600">{{ today }}</p>
+                        <h2 class="mt-1.5 text-2xl font-extrabold text-gray-900 sm:text-3xl">
                             Selamat Datang, {{ firstName }}
                         </h2>
-                        <p class="mt-1 text-sm text-blue-200">
+                        <p class="mt-1 text-sm text-gray-500">
                             Sistem Pengarsipan Dokumen Internal Kampus STTNI.
                         </p>
                     </div>
@@ -121,7 +120,7 @@ const cards = computed(() => [
                     <div class="flex flex-wrap items-center gap-2.5">
                         <button
                             type="button"
-                            class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-600/40 transition hover:from-blue-700 hover:to-blue-800 hover:scale-105"
+                            class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700"
                             @click="openUploadModal"
                         >
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -132,7 +131,7 @@ const cards = computed(() => [
 
                         <Link
                             :href="routeFn('arsip.index')"
-                            class="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
+                            class="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
                         >
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />

@@ -24,16 +24,48 @@ class KategoriController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'kode' => ['required', 'string', 'unique:kategori_arsip,kode', 'max:50'],
-            'name' => ['required', 'string', 'max:255'],
+        $validated = $request->validate([
+            'kode' => ['required', 'string', 'max:50', 'unique:kategori_arsip,kode'],
+            'name' => ['required', 'string', 'max:255', 'unique:kategori_arsip,name'],
             'deskripsi' => ['nullable', 'string'],
             'parent_id' => ['nullable', 'exists:kategori_arsip,id'],
         ]);
 
-        $this->kategoriService->create($request->all());
+        $kategori = $this->kategoriService->create($validated);
 
-        return redirect()->route('kategori.index')->with('success', 'Kategori baru berhasil dibuat.');
+        // The kategori wizard needs the new id to attach sub-categories in its
+        // second step without leaving the page, so step one asks for JSON.
+        if ($request->expectsJson()) {
+            return response()->json([
+                'id' => $kategori->id,
+                'kode' => $kategori->kode,
+                'name' => $kategori->name,
+                'message' => 'Kategori "'.$kategori->name.'" berhasil dibuat.',
+            ], 201);
+        }
+
+        return redirect()->route('kategori.index')
+            ->with('success', 'Kategori "'.$kategori->name.'" berhasil dibuat.');
+    }
+
+    /**
+     * Store several sub-categories under one parent category at once.
+     */
+    public function storeChildren(Request $request, KategoriArsip $kategori)
+    {
+        $validated = $request->validate([
+            'children' => ['required', 'array', 'min:1'],
+            // distinct:ignore_case mirrors the case-insensitive collation of the
+            // unique index, so 'Surat Dinas' plus 'surat dinas' is rejected
+            // during validation instead of blowing up on insert.
+            'children.*' => ['required', 'string', 'max:255', 'distinct:ignore_case', 'unique:kategori_arsip,name'],
+        ]);
+
+        $created = $this->kategoriService->createChildren($kategori, $validated['children']);
+
+        // Both the wizard and the edit page post here, so return to whichever one
+        // the request came from instead of always bouncing to the index.
+        return back()->with('success', $created.' sub-kategori ditambahkan ke "'.$kategori->name.'".');
     }
 
     /**
@@ -46,14 +78,16 @@ class KategoriController extends Controller
 
     /**
      * Update the category details.
+     *
+     * parent_id is intentionally absent: the wizard fixes the hierarchy when the
+     * category is created, so it cannot be reassigned here.
      */
     public function update(Request $request, KategoriArsip $kategori)
     {
         $request->validate([
             'kode' => ['required', 'string', 'max:50', 'unique:kategori_arsip,kode,'.$kategori->id],
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255', 'unique:kategori_arsip,name,'.$kategori->id],
             'deskripsi' => ['nullable', 'string'],
-            'parent_id' => ['nullable', 'exists:kategori_arsip,id', 'different:id'],
         ]);
 
         $this->kategoriService->update($kategori, $request->all());
@@ -61,14 +95,22 @@ class KategoriController extends Controller
         return redirect()->route('kategori.index')->with('success', 'Kategori berhasil diperbarui.');
     }
 
-    /**
-     * Delete a category.
-     */
-    public function destroy(KategoriArsip $kategori)
-    {
-        $result = $this->kategoriService->delete($kategori);
+/**
+ * Delete a category.
+ *
+ * cascade is what the UI sends after the user confirms that the
+ * sub-categories go away together with their parent.
+ */
+public function destroy(Request $request, KategoriArsip $kategori)
+{
+    $validated = $request->validate([
+        'cascade' => ['sometimes', 'boolean'],
+    ]);
 
-        return redirect()->route('kategori.index')
-            ->with($result['success'] ? 'success' : 'error', $result['message']);
-    }
+    $result = $this->kategoriService->delete($kategori, (bool) ($validated['cascade'] ?? false));
+
+    // Sub-categories are deleted from the edit page and parents from the
+    // listing, so return to whichever screen the request came from.
+    return back()->with($result['success'] ? 'success' : 'error', $result['message']);
+}
 }

@@ -1,6 +1,6 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
-import { useForm } from '@inertiajs/vue3'
+import { useForm, usePage } from '@inertiajs/vue3'
 import Modal from './ui/Modal.vue'
 import Input from './ui/Input.vue'
 import Select from './ui/Select.vue'
@@ -20,6 +20,13 @@ const props = defineProps({
 
 const emit = defineEmits(['close'])
 
+const page = usePage()
+const currentUser = computed(() => page.props.auth?.user)
+const userRoles = computed(() => currentUser.value?.roles ?? [])
+const isAdminOrSuperadmin = computed(() =>
+    userRoles.value.some(r => ['Admin', 'Superadmin'].includes(r))
+)
+
 const routeFn = useRoute()
 const { start: feedbackStart, success: feedbackSuccess, error: feedbackError } = useUploadFeedback()
 
@@ -38,10 +45,36 @@ const form = useForm({
     deskripsi: '',
     kategori_id: '',
     divisi_id: '',
-    study_program_id: '',
+    tanpa_divisi: false,
+    nama_prodi: '',
+    tanpa_prodi: true,
     tanggal_dokumen: new Date().toISOString().slice(0, 10),
     status_publikasi: 'Internal',
     tags: '',
+})
+
+const toggleTanpaDivisi = () => {
+    if (form.tanpa_divisi) {
+        form.divisi_id = ''
+    }
+}
+
+watch(() => form.divisi_id, (newVal) => {
+    if (newVal) {
+        form.tanpa_divisi = false
+    }
+})
+
+const toggleTanpaProdi = () => {
+    if (form.tanpa_prodi) {
+        form.nama_prodi = ''
+    }
+}
+
+watch(() => form.nama_prodi, (newVal) => {
+    if (newVal) {
+        form.tanpa_prodi = false
+    }
 })
 
 // Definition of category rules
@@ -77,9 +110,6 @@ const getKategoriKode = (id) => {
 const activeKategoriKode = computed(() => getKategoriKode(form.kategori_id))
 
 // Aturan Visibilitas & Mandatory
-const showStudyProgram = computed(() => groups.A.includes(activeKategoriKode.value))
-const isStudyProgramMandatory = computed(() => groups.AMandatory.includes(activeKategoriKode.value))
-
 const showNomorSurat = computed(() => {
     const kode = activeKategoriKode.value
     return groups.B.includes(kode) || groups.A.includes(kode) || !groups.C.includes(kode)
@@ -107,11 +137,6 @@ watch(() => form.kategori_id, (newId) => {
         if (form.tanpa_nomor_surat) {
             form.nomor_surat = 'Tanpa Nomor'
         }
-    }
-
-    // Reset prodi jika tidak masuk dalam kelompok A
-    if (!groups.A.includes(kode)) {
-        form.study_program_id = ''
     }
 })
 
@@ -201,16 +226,28 @@ watch(
         loading.value = true
 
         try {
-            const { data } = await axios.get(routeFn('arsip.meta'))
+            const response = await fetch(routeFn('arsip.meta'), {
+                headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            })
+            if (!response.ok) throw new Error(`HTTP ${response.status}`)
+            const data = await response.json()
             divisiTree.value = data.divisiTree ?? []
             kategoriTree.value = data.kategoriTree ?? []
             studyPrograms.value = data.studyPrograms ?? []
+
+            if (divisiTree.value.length === 0 && kategoriTree.value.length === 0) {
+                loadError.value = 'Data jenis dokumen dan unit kerja belum tersedia.'
+            }
         } catch (e) {
             loadError.value = 'Gagal memuat data form. Silakan coba lagi.'
         } finally {
             loading.value = false
         }
     },
+    // The layout renders this component with v-if, so show is already true by
+    // the time it mounts. Without immediate the watcher never fired and the
+    // jenis dokumen / unit kerja dropdowns stayed empty.
+    { immediate: true },
 )
 </script>
 
@@ -218,23 +255,22 @@ watch(
     <Modal :show="show" max-width="4xl" @close="emit('close')">
         <div class="flex max-h-[90vh] flex-col overflow-hidden rounded-xl">
             <!-- Header Modal -->
-            <div class="relative shrink-0 bg-gradient-to-r from-navy via-navy-dark to-[#0A1120] px-6 py-5">
-                <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(212,175,55,0.15),transparent_60%)]"></div>
-                <div class="relative flex items-center justify-between gap-4">
+            <div class="shrink-0 border-b border-gray-200 bg-white px-6 py-5">
+                <div class="flex items-center justify-between gap-4">
                     <div class="flex items-center gap-3.5">
-                        <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-gold to-gold-light text-navy shadow-lg shadow-black/30">
+                        <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
                             <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
                             </svg>
                         </span>
                         <div>
-                            <h3 class="text-lg font-extrabold text-white">Formulir Unggah Dokumen</h3>
-                            <p class="text-xs text-blue-200">Sistem Pengarsipan Dokumen Internal Kampus STTNI</p>
+                            <h3 class="text-lg font-extrabold text-gray-900">Formulir Unggah Dokumen</h3>
+                            <p class="text-xs text-gray-500">Sistem Pengarsipan Dokumen Internal Kampus STTNI</p>
                         </div>
                     </div>
                     <button
                         type="button"
-                        class="rounded-xl p-2 text-blue-200 transition hover:bg-white/10 hover:text-white"
+                        class="rounded-xl p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
                         @click="emit('close')"
                     >
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -322,8 +358,8 @@ watch(
 
                         <!-- Grid Form Field Wajib -->
                         <div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <!-- 3. Jenis Dokumen -->
-                            <div>
+                            <!-- 1. Jenis Dokumen -->
+                            <div class="sm:col-span-2">
                                 <label class="mb-1 block text-xs font-semibold text-gray-700">
                                     Jenis Dokumen <span class="text-red-500">*</span>
                                 </label>
@@ -342,14 +378,33 @@ watch(
                                 <InputError :message="form.errors.kategori_id" class="mt-1" />
                             </div>
 
-                            <!-- 4. Unit Kerja -->
-                            <div>
-                                <label class="mb-1 block text-xs font-semibold text-gray-700">
-                                    Unit Kerja <span class="text-red-500">*</span>
-                                </label>
+                            <!-- 2. Unit Kerja -->
+                            <!-- Admin/Superadmin: dropdown + toggle checkbox "Tanpa Unit Kerja" -->
+                            <!-- Dosen/Staf: tampil info unit kerja otomatis dari akun (tidak perlu memilih) -->
+                            <div v-if="isAdminOrSuperadmin"
+                                class="sm:col-span-1 rounded-xl border p-3.5 transition-colors duration-200"
+                                :class="!form.tanpa_divisi ? 'border-blue-200 bg-blue-50/30' : 'border-gray-100 bg-gray-100/60'"
+                            >
+                                <div class="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                                    <label class="text-xs font-semibold text-gray-700">
+                                        Unit Kerja
+                                        <span v-if="!form.tanpa_divisi" class="text-red-500">*</span>
+                                        <span v-else class="ml-1 text-[11px] font-normal text-gray-400">(Opsional)</span>
+                                    </label>
+                                    <label class="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-indigo-600">
+                                        <input
+                                            v-model="form.tanpa_divisi"
+                                            type="checkbox"
+                                            class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                            @change="toggleTanpaDivisi"
+                                        />
+                                        Tanpa Unit Kerja
+                                    </label>
+                                </div>
                                 <Select
                                     v-model="form.divisi_id"
-                                    :class="{ 'border-red-500 focus:border-red-500 focus:ring-red-500/20': form.errors.divisi_id }"
+                                    :disabled="form.tanpa_divisi"
+                                    :class="{ 'border-red-500 focus:border-red-500 focus:ring-red-500/20': form.errors.divisi_id, 'bg-gray-100 text-gray-400 cursor-not-allowed': form.tanpa_divisi }"
                                 >
                                     <option value="">-- Pilih Unit Kerja --</option>
                                     <template v-for="f in divisiTree" :key="f.id">
@@ -362,31 +417,48 @@ watch(
                                 <InputError :message="form.errors.divisi_id" class="mt-1" />
                             </div>
 
-                            <!-- 5. Program Studi (Conditional: hanya tampil jika Kelompok A) -->
-                            <Transition
-                                enter-active-class="transition-all duration-300 ease-out"
-                                enter-from-class="opacity-0 -translate-y-2"
-                                enter-to-class="opacity-100 translate-y-0"
-                                leave-active-class="transition-all duration-200 ease-in"
-                                leave-from-class="opacity-100 translate-y-0"
-                                leave-to-class="opacity-0 -translate-y-2"
+                            <!-- Dosen/Staf: info unit kerja otomatis -->
+                            <div v-else class="sm:col-span-1 flex flex-col justify-center rounded-xl border border-blue-100 bg-blue-50/60 p-3.5">
+                                <label class="block text-[11px] font-bold uppercase tracking-wider text-blue-900">
+                                    Unit Kerja Pengunggah
+                                </label>
+                                <div class="mt-1.5 flex items-center gap-2">
+                                    <span class="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1 text-xs font-bold text-white shadow-sm">
+                                        🏢 {{ currentUser?.divisi?.name ?? 'Unit Kerja Anda' }}
+                                    </span>
+                                </div>
+                                <span class="mt-1 text-[11px] text-blue-600 italic">Otomatis mewakili akun pengunggah</span>
+                            </div>
+
+                            <!-- 3. Program Studi (Input Teks Bebas seperti Nomor Surat) -->
+                            <div class="sm:col-span-1 rounded-xl border p-3.5 transition-colors duration-200"
+                                :class="!form.tanpa_prodi ? 'border-blue-200 bg-blue-50/30' : 'border-gray-100 bg-gray-100/60'"
                             >
-                                <div v-if="showStudyProgram" class="sm:col-span-2">
-                                    <label class="mb-1 block text-xs font-semibold text-gray-700">
+                                <div class="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                                    <label class="text-xs font-semibold text-gray-700">
                                         Program Studi
-                                        <span v-if="isStudyProgramMandatory" class="text-red-500">*</span>
+                                        <span v-if="!form.tanpa_prodi" class="text-red-500">*</span>
                                         <span v-else class="ml-1 text-[11px] font-normal text-gray-400">(Opsional)</span>
                                     </label>
-                                    <Select
-                                        v-model="form.study_program_id"
-                                        :class="{ 'border-red-500 focus:border-red-500 focus:ring-red-500/20': form.errors.study_program_id }"
-                                    >
-                                        <option value="">-- Pilih Program Studi --</option>
-                                        <option v-for="sp in studyPrograms" :key="sp.id" :value="sp.id">{{ sp.name }}</option>
-                                    </Select>
-                                    <InputError :message="form.errors.study_program_id" class="mt-1" />
+                                    <label class="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-indigo-600">
+                                        <input
+                                            v-model="form.tanpa_prodi"
+                                            type="checkbox"
+                                            class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                            @change="toggleTanpaProdi"
+                                        />
+                                        Tanpa Program Studi
+                                    </label>
                                 </div>
-                            </Transition>
+                                <Input
+                                    v-model="form.nama_prodi"
+                                    type="text"
+                                    :disabled="form.tanpa_prodi"
+                                    placeholder="Contoh: Sistem Informasi"
+                                    :class="{ 'border-red-500 focus:border-red-500 focus:ring-red-500/20': form.errors.nama_prodi, 'bg-gray-100 text-gray-400 cursor-not-allowed': form.tanpa_prodi }"
+                                />
+                                <InputError :message="form.errors.nama_prodi" class="mt-1" />
+                            </div>
 
                             <!-- 6. Nomor Surat / Dokumen -->
                             <!-- Selalu tampil; mandatory jika Kelompok B, auto-disabled jika Kelompok C -->

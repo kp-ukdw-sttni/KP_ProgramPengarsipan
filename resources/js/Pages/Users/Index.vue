@@ -89,7 +89,7 @@ const statusBadge = (status) => {
             <template #actions>
                 <Link
                     :href="routeFn('users.create')"
-                    class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-600/40 transition hover:from-blue-700 hover:to-blue-800"
+                    class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-600/40 transition hover:bg-blue-700"
                 >
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
@@ -101,7 +101,7 @@ const statusBadge = (status) => {
 
         <div class="mt-5 mb-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
             <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
-                <Input v-model="search" type="text" placeholder="Cari nama, email, atau NIK/NIM..." />
+                <Input v-model="search" type="text" placeholder="Cari nama, email, atau NIDN/NIP..." />
                 <Select v-model="role">
                     <option value="">Semua Role</option>
                     <option v-for="r in roles" :key="r.id" :value="r.name">{{ r.name }}</option>
@@ -137,7 +137,7 @@ const statusBadge = (status) => {
                                 <div class="font-semibold text-gray-900">{{ user.name }}</div>
                                 <div class="mt-0.5 text-[11px] text-gray-400">
                                     {{ user.email }}
-                                    <span v-if="user.nik_nim">&bull; {{ user.nik_nim }}</span>
+                                    <span v-if="user.nidn_nip">&bull; {{ user.nidn_nip }}</span>
                                 </div>
                             </td>
                             <td class="px-5 py-4">

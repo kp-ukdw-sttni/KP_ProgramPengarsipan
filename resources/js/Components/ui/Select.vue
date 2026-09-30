@@ -1,4 +1,6 @@
 <script setup>
+defineOptions({ inheritAttrs: false })
+
 defineProps({
     modelValue: {
         type: [String, Number],
@@ -10,9 +12,10 @@ defineProps({
 <template>
     <div class="relative">
         <select
+            v-bind="$attrs"
             :value="modelValue"
             @change="$emit('update:modelValue', $event.target.value)"
-            class="block w-full cursor-pointer appearance-none rounded-lg border-gray-300 bg-white py-2 pl-3 pr-9 text-sm text-gray-900 shadow-sm transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 focus:outline-none"
+            class="block w-full cursor-pointer appearance-none rounded-lg border-gray-300 bg-white py-2 pl-3 pr-9 text-sm text-gray-900 shadow-sm transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
         >
             <slot />
         </select>

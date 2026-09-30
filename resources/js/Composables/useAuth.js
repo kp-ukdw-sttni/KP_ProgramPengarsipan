@@ -30,12 +30,22 @@ export function useAuth() {
 
     const canSign = () => hasRole('Admin', 'Superadmin', 'Dosen')
 
+    // Access is decided server-side (App\Support\AksesDokumen) and shipped per row
+    // as `bisa_diakses`. It deliberately does NOT re-derive the rule from
+    // status_publikasi here: the previous version ignored approved access
+    // requests entirely, so an approved user saw a locked document and no
+    // buttons at all.
     const canViewFile = (arsip) => {
         if (!user.value) return false
-        if (hasRole('Admin', 'Superadmin')) return true
-        if (['Internal'].includes(arsip.status_publikasi)) return true
-        if (arsip.uploader_id === user.value.id) return true
-        return false
+        return arsip?.bisa_diaccessed === true || arsip?.bisa_diakses === true
+    }
+
+    // True when the row is restricted and this user may ask for it.
+    const canRequestAccess = (arsip) => {
+        if (!user.value) return false
+        if (arsip?.bisa_diakses) return false
+        if (!arsip?.butuh_persetujuan) return false
+        return arsip?.status_permintaan !== 'Pending'
     }
 
     return {
@@ -48,5 +58,6 @@ export function useAuth() {
         canManageArsip,
         canSign,
         canViewFile,
+        canRequestAccess,
     }
 }
